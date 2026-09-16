@@ -1,68 +1,151 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from "react";
+import Navbar from "@/components/Navbar";
+import LobbyView from "@/components/LobbyView";
+import ProblemWorkspace from "@/components/ProblemWorkspace";
+import LeaderboardView from "@/components/LeaderboardView";
+import { Participant, ContestStatus, Submission } from "@/lib/types";
+
+export default function HomePage() {
+  const [participant, setParticipant] = useState<Participant | null>(null);
+  const [contestStatus, setContestStatus] = useState<ContestStatus>("WAITING");
+  const [currentRound, setCurrentRound] = useState<1 | 2>(1);
+  const [round2Unlocked, setRound2Unlocked] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"workspace" | "leaderboard">("workspace");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load stored participant session if exists
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("blindcode_participant");
+      if (stored) {
+        setParticipant(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn("Could not read local storage", e);
+    }
+  }, []);
+
+  // Poll contest state
+  useEffect(() => {
+    async function checkContestState() {
+      try {
+        const res = await fetch("/api/contest");
+        const data = await res.json();
+        if (data?.contest) {
+          setContestStatus(data.contest.status);
+          setCurrentRound(data.contest.currentRound || 1);
+          setRound2Unlocked(Boolean(data.contest.round2Unlocked));
+        }
+      } catch (err) {
+        console.error("Failed to query contest status:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkContestState();
+    const interval = setInterval(checkContestState, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleJoinSuccess = (p: Participant) => {
+    setParticipant(p);
+    try {
+      localStorage.setItem("blindcode_participant", JSON.stringify(p));
+    } catch (e) {
+      console.warn("Could not save to localStorage", e);
+    }
+  };
+
+  const handleLogout = () => {
+    setParticipant(null);
+    try {
+      localStorage.removeItem("blindcode_participant");
+    } catch (e) {}
+  };
+
+  const handleContestStarted = () => {
+    setContestStatus("ACTIVE");
+    setActiveTab("workspace");
+  };
+
+  const handleSubmissionComplete = (sub: Submission) => {
+    if (participant) {
+      const updated: Participant = {
+        ...participant,
+        currentProblemIndex:
+          sub.problemId === "p1-linked-list"
+            ? 1
+            : sub.problemId === "p2-queues"
+            ? 2
+            : participant.currentProblemIndex,
+        completed: sub.problemId === "p2-queues",
+        totalScore: participant.totalScore + (sub.evaluation?.score || 0),
+      };
+      setParticipant(updated);
+      try {
+        localStorage.setItem("blindcode_participant", JSON.stringify(updated));
+      } catch (e) {}
+    }
+  };
+
+  const handleAllCompleted = () => {
+    setActiveTab("leaderboard");
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="cyber-bg min-h-screen flex flex-col">
+      <Navbar
+        status={contestStatus}
+        participant={participant}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={handleLogout}
+      />
+
+      <main className="flex-1 flex flex-col">
+        {/* If event is fully CLOSED */}
+        {contestStatus === "CLOSED" ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center animate-fade-in">
+            <div className="rounded-lg border border-red-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
+              <div className="w-12 h-12 rounded-full bg-red-950/80 border border-red-600/50 flex items-center justify-center mx-auto mb-4 text-red-500">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-900/80 bg-red-950/40 text-xs font-mono text-red-400 mb-4">
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                Event Terminated
+              </div>
+              <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">
+                Contest is Closed
+              </h2>
+              <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">
+                The administrator has permanently closed this event. The leaderboard and problem workspace are no longer accessible. Thank you for participating.
+              </p>
+            </div>
+          </div>
+        ) : activeTab === "leaderboard" ? (
+          <LeaderboardView currentParticipant={participant} />
+        ) : !participant || contestStatus === "WAITING" ? (
+          /* Clean Lobby view */
+          <LobbyView
+            existingParticipant={participant}
+            onJoinSuccess={handleJoinSuccess}
+            onContestStarted={handleContestStarted}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <ProblemWorkspace
+            participant={participant}
+            round2Unlocked={round2Unlocked}
+            onAllCompleted={handleAllCompleted}
+            onSubmissionComplete={handleSubmissionComplete}
+            onViewLeaderboard={() => setActiveTab("leaderboard")}
+          />
+        )}
       </main>
     </div>
   );
