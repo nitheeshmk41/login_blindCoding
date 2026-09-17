@@ -5,7 +5,6 @@ import {
   Send,
   Timer,
   CheckCircle2,
-  RotateCcw,
   Maximize2,
   ShieldAlert,
   Trophy,
@@ -253,12 +252,6 @@ export default function ProblemWorkspace({
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleClearCode = () => {
-    if (confirm("Reset editor content? All written code will be cleared.")) {
-      setCode("");
-    }
   };
 
   // Key interceptor for anti-cheat
@@ -878,16 +871,7 @@ export default function ProblemWorkspace({
                 </span>
               )}
 
-              <button
-                onClick={() => {
-                  playClickSound();
-                  handleClearCode();
-                }}
-                title="Reset code"
-                className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
+
             </div>
           </div>
 

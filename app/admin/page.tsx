@@ -743,7 +743,7 @@ export default function AdminPage() {
                   <Music className="w-3.5 h-3.5 text-red-500 animate-pulse" /> 3-Song Stream:
                 </span>
                 <div className="flex items-center gap-1">
-                  {[0, 0.25, 0.5, 0.75, 1.0].map((v) => (
+                  {[0, 0.1, 0.25, 0.5, 0.75, 1.0].map((v) => (
                     <button
                       key={v}
                       onClick={() => handleSetMusicVolume(v)}
@@ -753,7 +753,7 @@ export default function AdminPage() {
                           : "text-zinc-400 hover:text-white"
                       }`}
                     >
-                      {v === 0 ? "Mute" : `${v * 100}%`}
+                      {v === 0 ? "Mute" : `${Math.round(v * 100)}%`}
                     </button>
                   ))}
                   <button

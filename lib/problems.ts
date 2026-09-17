@@ -13,24 +13,34 @@ export const CONTEST_PROBLEMS: Problem[] = [
     description: `In the movie "DC" (2026), Das's gang recovers stolen cash bundles from Bhojaraj's operatives. The recovered amounts are stored in an array of integers:
 Example: [500, 1200, 750, 2000, 950]
 
-Write a simple function to calculate and return the total sum of all recovered money amounts in the array.
+📌 WHAT YOU HAVE TO DO:
+1. Complete/write the function 'calculateTotalMoney'.
+2. Calculate and RETURN the integer total sum of all recovered money amounts in the array.
+3. DO NOT print output to the console/stdout (no print / System.out / cout / console.log). Simply RETURN the calculated total from your function.
+
+Function Signature:
+• C++: int calculateTotalMoney(const std::vector<int>& amounts)
+• Java: public int calculateTotalMoney(int[] amounts)
+• Python: def calculateTotalMoney(self, amounts: list[int]) -> int
+• JavaScript: function calculateTotalMoney(amounts)
+• C: int calculateTotalMoney(int amounts[], int n)
 
 Note:
 • This is a DEMO Question (5 Mins working time).
 • NO MARKS and NO EVALUATION for this question.
 • Use this question to get comfortable typing without visual syntax feedback in the Blind Coding workspace!`,
-    inputFormat: `An array of integers representing recovered money amounts and the size of the array N.`,
-    outputFormat: `Return the integer total sum of all recovered money amounts.`,
+    inputFormat: `Function parameter 'amounts' (array/list of integers) representing recovered money amounts (plus array size 'n' in C).`,
+    outputFormat: `RETURN the integer total sum of all recovered money amounts directly from the function. DO NOT print output.`,
     examples: [
       {
         input: "amounts = [500, 1200, 750, 2000, 950], N = 5",
         output: "5400",
-        explanation: "500 + 1200 + 750 + 2000 + 950 = 5400 total recovered cash.",
+        explanation: "500 + 1200 + 750 + 2000 + 950 = 5400 total recovered cash returned by function.",
       },
       {
         input: "amounts = [100, 200, 300], N = 3",
         output: "600",
-        explanation: "100 + 200 + 300 = 600.",
+        explanation: "100 + 200 + 300 = 600 returned by function.",
       },
     ],
     constraints: [
@@ -41,14 +51,15 @@ Note:
     hints: [
       "Initialize sum = 0.",
       "Iterate through the array from i = 0 to N - 1 and add amounts[i] to sum.",
-      "Return sum.",
+      "Return sum directly from the function.",
     ],
     solutionGuide: `// Simple Array Sum Pseudocode:
 // int total = 0;
 // for (int val : amounts) total += val;
 // return total;`,
     starterCode: {
-      cpp: `#include <vector>
+      cpp: `// Complete the function below. RETURN the total sum. Do NOT print to console.
+#include <vector>
 #include <numeric>
 
 int calculateTotalMoney(const std::vector<int>& amounts) {
@@ -59,7 +70,8 @@ int calculateTotalMoney(const std::vector<int>& amounts) {
     return total;
 }
 `,
-      java: `class Solution {
+      java: `// Complete the method below. RETURN the total sum. Do NOT print to console.
+class Solution {
     public int calculateTotalMoney(int[] amounts) {
         int total = 0;
         for (int amount : amounts) {
@@ -69,7 +81,8 @@ int calculateTotalMoney(const std::vector<int>& amounts) {
     }
 }
 `,
-      javascript: `function calculateTotalMoney(amounts) {
+      javascript: `// Complete the function below. RETURN the total sum. Do NOT print to console.
+function calculateTotalMoney(amounts) {
     let total = 0;
     for (let i = 0; i < amounts.length; i++) {
         total += amounts[i];
@@ -77,11 +90,13 @@ int calculateTotalMoney(const std::vector<int>& amounts) {
     return total;
 }
 `,
-      python: `class Solution:
+      python: `# Complete the method below. RETURN the total sum. Do NOT print to console.
+class Solution:
     def calculateTotalMoney(self, amounts: list[int]) -> int:
         return sum(amounts)
 `,
-      c: `int calculateTotalMoney(int amounts[], int n) {
+      c: `// Complete the function below. RETURN the total sum. Do NOT print to console.
+int calculateTotalMoney(int amounts[], int n) {
     int total = 0;
     for (int i = 0; i < n; i++) {
         total += amounts[i];
@@ -106,15 +121,16 @@ Entering order: Room 1 → Room 2 → Room 3 → Room 4.
 When the police task force seals off the main entrance, Das must exit in exact reverse Last-In-First-Out (LIFO) order:
 Exit order: Room 4 → Room 3 → Room 2 → Room 1.
 
-Implement a Stack data structure to simulate Das's room entry and escape sequence:
-• push(roomId): Pushes room ID onto stack as Das enters a room.
-• pop(): Removes and returns the top room ID as Das exits the current room (-1 if empty).
-• peek(): Returns top room ID without removing it (-1 if empty).
-• isEmpty(): Returns true if all rooms are cleared (stack is empty).
-
-Goal: Maintain proper stack operations without corrupting room order.`,
-    inputFormat: `Sequence of stack operations (push, pop, peek, isEmpty).`,
-    outputFormat: `Room IDs returned during pop/peek queries and boolean for isEmpty.`,
+📌 WHAT YOU HAVE TO DO:
+1. Implement the methods of the class 'LodgeEscapeStack' (or equivalent struct/functions in C).
+2. DO NOT print output to the console/stdout (no print / System.out / cout / console.log).
+3. RETURN values directly from each method:
+   • push(roomId): Pushes room ID onto top of stack.
+   • pop(): Removes and RETURNS top room ID (integer). If stack is empty, RETURN -1.
+   • peek(): RETURNS top room ID (integer) without removing it. If stack is empty, RETURN -1.
+   • isEmpty(): RETURNS true (boolean) if stack is empty, else false.`,
+    inputFormat: `Method call parameters: 'roomId' (integer) for push(). No arguments for pop(), peek(), isEmpty().`,
+    outputFormat: `RETURN integer for pop() and peek() (-1 if empty); RETURN boolean for isEmpty(). DO NOT print output.`,
     examples: [
       {
         input: "push(1), push(2), push(3), push(4), pop(), pop(), pop(), pop()",
@@ -142,7 +158,8 @@ Goal: Maintain proper stack operations without corrupting room order.`,
 // pop(): return top < 0 ? -1 : arr[top--]
 // peek(): return top < 0 ? -1 : arr[top]`,
     starterCode: {
-      cpp: `#include <vector>
+      cpp: `// Implement the LodgeEscapeStack class methods below. RETURN values from pop/peek/isEmpty. Do NOT print.
+#include <vector>
 #include <iostream>
 
 class LodgeEscapeStack {
@@ -171,7 +188,8 @@ public:
     }
 };
 `,
-      java: `import java.util.Stack;
+      java: `// Implement the LodgeEscapeStack class methods below. RETURN values from pop/peek/isEmpty. Do NOT print.
+import java.util.Stack;
 
 class LodgeEscapeStack {
     private Stack<Integer> stack = new Stack<>();
@@ -195,7 +213,8 @@ class LodgeEscapeStack {
     }
 }
 `,
-      javascript: `class LodgeEscapeStack {
+      javascript: `// Implement the LodgeEscapeStack class methods below. RETURN values from pop/peek/isEmpty. Do NOT print.
+class LodgeEscapeStack {
     constructor() {
         this.stack = [];
     }
@@ -219,7 +238,8 @@ class LodgeEscapeStack {
     }
 }
 `,
-      python: `class LodgeEscapeStack:
+      python: `# Implement the LodgeEscapeStack class methods below. RETURN values from pop/peek/isEmpty. Do NOT print.
+class LodgeEscapeStack:
     def __init__(self):
         self.stack = []
 
@@ -239,7 +259,8 @@ class LodgeEscapeStack {
     def isEmpty(self) -> bool:
         return len(self.stack) == 0
 `,
-      c: `#include <stdbool.h>
+      c: `// Implement the LodgeEscapeStack struct and functions below. RETURN values from pop/peek/isEmpty. Do NOT print.
+#include <stdbool.h>
 
 typedef struct {
     int arr[500];
@@ -292,13 +313,25 @@ Input List:  Das (10) → Karuppu (20) → Sebastian (30) → Kitty (40) → NUL
 Remove Target: 30 (Sebastian)
 Output List: Das (10) → Karuppu (20) → Kitty (40) → NULL
 
+📌 WHAT YOU HAVE TO DO:
+1. Complete/write the function 'removeGangMember'.
+2. Modify node pointer references strictly IN-PLACE.
+3. RETURN the head node pointer/reference of the updated singly linked list directly from your function.
+4. DO NOT print output to the console/stdout (no print / System.out / cout / console.log).
+
+Function Signature:
+• C++: ListNode* removeGangMember(ListNode* head, int targetVal)
+• Java: public ListNode removeGangMember(ListNode head, int targetVal)
+• Python: def removeGangMember(self, head: ListNode, targetVal: int) -> ListNode
+• JavaScript: function removeGangMember(head, targetVal)
+• C: struct ListNode* removeGangMember(struct ListNode* head, int targetVal)
+
 Constraints & Directives:
 • Do NOT use an auxiliary array, set, or dummy list data structures (O(1) extra space).
 • Modify node pointer references strictly in-place.
-• Handle edge cases: removing head node, removing consecutive matching nodes, or if targetVal is not present.
-• Blind Coding Challenge: Track pointer mutations mentally!`,
-    inputFormat: `Head node of a singly linked list representing member IDs and an integer targetVal.`,
-    outputFormat: `Return the head pointer of the modified singly linked list with matching target member IDs unlinked.`,
+• Handle edge cases: removing head node, removing consecutive matching nodes, or if targetVal is not present.`,
+    inputFormat: `Function arguments: 'head' (pointer/reference to first node of singly linked list) and 'targetVal' (integer member ID to remove).`,
+    outputFormat: `RETURN the head node pointer/reference of the modified singly linked list. DO NOT print output.`,
     examples: [
       {
         input: "10 → 20 → 30 → 40 → NULL, targetVal = 30",
@@ -335,7 +368,8 @@ Constraints & Directives:
 // 5.    Else: prev = current; current = current.next;
 // 6. Return dummy.next.`,
     starterCode: {
-      cpp: `/**
+      cpp: `// Complete the removeGangMember function below. RETURN the head of the modified list. Do NOT print.
+/**
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -365,7 +399,8 @@ ListNode* removeGangMember(ListNode* head, int targetVal) {
     return dummy.next;
 }
 `,
-      java: `/**
+      java: `// Complete the removeGangMember method below. RETURN the head of the modified list. Do NOT print.
+/**
  * Definition for singly-linked list.
  * public class ListNode {
  *     int val;
@@ -393,7 +428,8 @@ class Solution {
     }
 }
 `,
-      javascript: `/**
+      javascript: `// Complete the removeGangMember function below. RETURN the head of the modified list. Do NOT print.
+/**
  * Definition for singly-linked list.
  * function ListNode(val, next) {
  *     this.val = (val===undefined ? 0 : val);
@@ -417,7 +453,8 @@ function removeGangMember(head, targetVal) {
     return dummy.next;
 }
 `,
-      python: `# Definition for singly-linked list.
+      python: `# Complete the removeGangMember method below. RETURN the head of the modified list. Do NOT print.
+# Definition for singly-linked list.
 # class ListNode:
 #     def __init__(self, val=0, next=None):
 #         self.val = val
@@ -438,7 +475,8 @@ class Solution:
             
         return dummy.next
 `,
-      c: `/**
+      c: `// Complete the removeGangMember function below. RETURN the head of the modified list. Do NOT print.
+/**
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
+import { playSuccessSound } from "@/lib/sound-effects";
 import {
   Trophy,
   Medal,
@@ -33,6 +35,27 @@ export default function LeaderboardView({
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+
+  const lastConfettiTimeRef = useRef<number>(0);
+
+  const handleHoverCelebration = (isSilver = false) => {
+    const now = Date.now();
+    if (now - lastConfettiTimeRef.current < 1200) return; // Debounce 1.2s
+    lastConfettiTimeRef.current = now;
+
+    try {
+      playSuccessSound();
+      confetti({
+        particleCount: isSilver ? 35 : 55,
+        spread: 75,
+        origin: { y: 0.45 },
+        colors: isSilver
+          ? ["#e4e4e7", "#a1a1aa", "#71717a", "#ffffff"]
+          : ["#dc2626", "#ef4444", "#991b1b", "#ffffff", "#f87171"],
+        disableForReducedMotion: true,
+      });
+    } catch (e) {}
+  };
 
   const fetchLeaderboardData = async () => {
     setIsLoading(true);
@@ -120,28 +143,29 @@ export default function LeaderboardView({
 
   if (!resultsPublished) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center animate-fade-in font-mono">
-        <div className="rounded-3xl border border-red-900/60 bg-zinc-950 w-full shadow-2xl relative overflow-hidden">
-          <div className="relative h-56 overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-3xl mx-auto w-full text-center animate-fade-in font-mono my-auto">
+        <div className="rounded-3xl border border-red-900/80 bg-zinc-950 w-full shadow-[0_0_50px_rgba(220,38,38,0.2)] relative overflow-hidden">
+          <div className="relative h-64 sm:h-80 overflow-hidden">
             <img
-              src="/dc_movie_full.jpg"
-              alt="DC Movie Poster"
-              className="w-full h-full object-cover object-top filter brightness-75 contrast-105"
+              src="/das.jpg"
+              alt="Das Banner"
+              className="w-full h-full object-cover object-[center_25%] filter brightness-90 contrast-110"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent" />
+            <div className="absolute -top-20 -left-20 w-72 h-72 bg-red-600/30 rounded-full blur-3xl pointer-events-none" />
           </div>
-          <div className="p-6 sm:p-8 relative -mt-12">
-            <div className="w-16 h-16 rounded-2xl bg-red-950/90 border border-red-600/60 flex items-center justify-center mx-auto mb-4 text-red-500 font-mono text-2xl font-bold shadow-2xl animate-pulse backdrop-blur-md">
+          <div className="p-6 sm:p-10 relative -mt-16">
+            <div className="w-16 h-16 rounded-2xl bg-red-950/90 border border-red-600/80 flex items-center justify-center mx-auto mb-4 text-red-500 font-mono text-3xl font-bold shadow-[0_0_30px_rgba(220,38,38,0.5)] animate-pulse backdrop-blur-md">
               🔒
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-900/80 bg-red-950/50 text-xs font-mono text-red-400 mb-4 font-bold tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-900/80 bg-red-950/60 text-xs font-mono text-red-400 mb-4 font-bold tracking-wider shadow-lg">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
               STANDINGS LOCKED · PENDING JUDGE PUBLICATION
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight font-mono">
+            <h2 className="text-2xl sm:text-4xl font-black text-white mb-3 tracking-tight font-mono drop-shadow-md">
               DC 2026 REVENGE STANDINGS
             </h2>
-            <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
               The contest administrator is reviewing final reverse-defect code evaluations. Official standings will be unlocked once published by the judge.
             </p>
           </div>
@@ -152,128 +176,97 @@ export default function LeaderboardView({
 
   return (
     <div className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6 font-mono">
-      {/* Unified Hero Movie Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-red-900/80 bg-zinc-950 shadow-2xl group">
-        <img
-          src="/dc_movie_full.jpg"
-          alt="DC Movie Banner"
-          className="w-full h-48 sm:h-60 object-cover object-top filter brightness-90 contrast-105 group-hover:scale-[1.01] transition-all duration-700"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-zinc-950/20 pointer-events-none" />
+      {/* 1. Hero Movie Banner with das.jpg Top Background */}
+      <div className="relative rounded-3xl overflow-hidden border border-red-900/80 bg-zinc-950 shadow-[0_0_50px_rgba(220,38,38,0.2)] group">
+        <div className="relative h-60 sm:h-72 md:h-[320px] w-full overflow-hidden">
+          <img
+            src="/das.jpg"
+            alt="Das Movie Banner"
+            className="w-full h-full object-cover object-[center_20%] filter brightness-95 contrast-105 group-hover:scale-[1.02] transition-transform duration-700"
+          />
+          {/* Layered cinematic dark red gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-transparent to-zinc-950/80" />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/30 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-red-900/20 rounded-full blur-3xl pointer-events-none" />
+        </div>
 
         {/* Banner Content Overlay */}
-        <div className="absolute bottom-5 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 flex flex-col md:flex-row md:items-end justify-between gap-5">
           <div className="flex items-center gap-4">
-            <img
-              src="/bc_logo.png"
-              alt="DC 2026 Logo"
-              className="w-16 h-16 rounded-2xl object-contain border border-red-700/80 bg-zinc-950/90 p-1.5 shadow-2xl shrink-0 backdrop-blur-md"
-            />
+            <div className="relative shrink-0">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-red-600 to-red-800 opacity-70 blur-sm" />
+              <img
+                src="/bc_logo.png"
+                alt="DC 2026 Logo"
+                className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain border border-red-600/80 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-md"
+              />
+            </div>
+
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="px-2.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md">
-                  DC 2026 TAMIL MOVIE EDITION
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="px-3 py-0.5 rounded-full bg-red-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-red-600/30">
+                  BLIND CODING 2026
                 </span>
-                <span className="text-[10px] px-2.5 py-0.5 rounded bg-black/80 border border-amber-500/40 text-amber-400 font-bold backdrop-blur-sm">
-                  TOP 2 WINNERS &amp; RUNNERS
+                <span className="text-[10px] sm:text-xs px-3 py-0.5 rounded-full bg-black/90 border border-red-600/50 text-red-400 font-bold backdrop-blur-md shadow-md">
+                  OFFICIAL STANDINGS
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-md">
-                <span>DSA REVENGE ARENA LEADERBOARD</span>
-                <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-lg">
+                <span>BLIND CODING: THE LAST HUMANS</span>
               </h1>
             </div>
           </div>
 
           {/* Quick Metrics Pills */}
-          <div className="flex items-center gap-2 text-xs">
-            <div className="px-3.5 py-2 rounded-xl bg-black/80 border border-zinc-800 text-zinc-300 flex items-center gap-2 backdrop-blur-md shadow-lg">
-              <Users className="w-3.5 h-3.5 text-red-400" />
-              <span>Candidates: <strong className="text-white">{totalCandidatesCount}</strong></span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+            <div className="px-4 py-2.5 rounded-2xl bg-black/85 border border-red-900/60 text-zinc-300 flex items-center gap-2.5 backdrop-blur-md shadow-xl">
+              <Users className="w-4 h-4 text-red-400" />
+              <span>Candidates: <strong className="text-white text-sm">{totalCandidatesCount}</strong></span>
             </div>
-            <div className="px-3.5 py-2 rounded-xl bg-black/80 border border-zinc-800 text-zinc-300 flex items-center gap-2 backdrop-blur-md shadow-lg">
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>Top Score: <strong className="text-amber-400">{highestScore}/200</strong></span>
+            <div className="px-4 py-2.5 rounded-2xl bg-black/85 border border-red-900/60 text-zinc-300 flex items-center gap-2.5 backdrop-blur-md shadow-xl">
+              <Award className="w-4 h-4 text-red-400" />
+              <span>Top Score: <strong className="text-red-400 text-sm">{highestScore}/200</strong></span>
             </div>
-            <div className="px-3.5 py-2 rounded-xl bg-black/80 border border-zinc-800 text-zinc-300 flex items-center gap-2 backdrop-blur-md shadow-lg">
-              <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
-              <span>Avg Score: <strong className="text-white">{avgScore} pts</strong></span>
+            <div className="px-4 py-2.5 rounded-2xl bg-black/85 border border-red-900/60 text-zinc-300 flex items-center gap-2.5 backdrop-blur-md shadow-xl">
+              <BarChart3 className="w-4 h-4 text-red-400" />
+              <span>Avg Score: <strong className="text-white text-sm">{avgScore} pts</strong></span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Controls & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-zinc-950 border border-zinc-800/80 shadow-xl">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-72">
-            <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search candidate by name or email..."
-              className="w-full bg-zinc-900/90 border border-zinc-800 focus:border-red-600 text-zinc-100 text-xs rounded-xl pl-10 pr-9 py-2.5 outline-none font-mono transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-          <span className="text-xs text-zinc-500 shrink-0">
-            Showing {filteredEntries.length} of {leaderboardEntries.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={fetchLeaderboardData}
-            disabled={isLoading}
-            className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-red-600/80 text-zinc-200 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md"
-            title="Refresh Standings Data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-red-500" : ""}`} />
-            <span>Refresh Standings</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Top 2 Winner & Runner Podium */}
+      {/* 2. Top 2 Winner & Runner Podium Cards */}
       {filteredEntries.length >= 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Rank #1: WINNER (Gold) */}
-          <div className="rounded-3xl border-2 border-amber-500/80 bg-gradient-to-b from-amber-950/40 via-zinc-950 to-zinc-950 p-6 sm:p-7 flex flex-col justify-between shadow-[0_0_40px_rgba(245,158,11,0.15)] relative overflow-hidden group">
-            <div className="absolute -right-8 -top-8 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all pointer-events-none" />
+          {/* Rank #1: WINNER */}
+          <div
+            onMouseEnter={() => handleHoverCelebration(false)}
+            className="rounded-3xl border-2 border-red-600/80 hover:border-red-500 bg-gradient-to-b from-red-950/40 via-zinc-950 to-zinc-950 p-6 sm:p-7 flex flex-col justify-between shadow-[0_0_40px_rgba(220,38,38,0.25)] hover:shadow-[0_0_60px_rgba(220,38,38,0.45)] hover:scale-[1.015] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+          >
+            <div className="absolute -right-8 -top-8 w-44 h-44 bg-red-600/10 rounded-full blur-3xl group-hover:bg-red-600/30 transition-all pointer-events-none" />
 
             <div>
               <div className="flex items-center justify-between mb-5">
-                <span className="px-4 py-1.5 rounded-xl bg-amber-500 text-black text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20">
-                  <Trophy className="w-4 h-4 text-black fill-black" /> #1 WINNER
-                </span>
-                <span className="text-xs font-bold text-amber-400 bg-amber-950/80 px-3 py-1.5 rounded-xl border border-amber-800/80">
-                  {filteredEntries[0].languages.join(" · ").toUpperCase() || "C++"}
+                <span className="px-4 py-1.5 rounded-xl bg-red-600 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-red-600/30">
+                  <Trophy className="w-4 h-4 text-white fill-white" /> #1 WINNER
                 </span>
               </div>
 
               <div className="mb-6">
-                <h3 className="text-3xl font-black text-amber-400 tracking-tight mb-1 flex items-center gap-2">
-                  <span>WINNER</span>
-                  <Sparkles className="w-5 h-5 text-amber-400" />
+                <h3 className="text-3xl font-black text-red-500 tracking-tight mb-1">
+                  {filteredEntries[0].participant.name}
                 </h3>
-                <p className="text-xs text-amber-500/80 uppercase tracking-widest font-bold">
-                  1st Place Champion · DSA Revenge Kingpin
+                <p className="text-xs text-red-400 font-bold tracking-wide">
+                  {filteredEntries[0].participant.email} · 1st Place Champion
                 </p>
               </div>
 
-              <div className="bg-amber-950/30 p-4 rounded-2xl border border-amber-900/60 flex items-baseline justify-between">
+              <div className="bg-red-950/30 p-4 rounded-2xl border border-red-900/60 flex items-baseline justify-between">
                 <div>
                   <span className="text-xs text-zinc-400 block mb-1">TOTAL AWARDED SCORE</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl sm:text-5xl font-black font-mono text-amber-400 tabular-nums drop-shadow">
+                    <span className="text-4xl sm:text-5xl font-black font-mono text-red-500 tabular-nums drop-shadow">
                       {filteredEntries[0].totalScore}
                     </span>
                     <span className="text-xs text-zinc-400 font-bold">/ 200 PTS</span>
@@ -282,14 +275,14 @@ export default function LeaderboardView({
 
                 <div className="text-right">
                   <span className="text-[11px] text-zinc-400 block mb-1">ACCURACY</span>
-                  <span className="text-lg font-bold text-amber-300">
+                  <span className="text-lg font-bold text-red-400">
                     {Math.round((filteredEntries[0].totalScore / 200) * 100)}%
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-amber-900/40 flex items-center justify-between text-xs">
+            <div className="mt-6 pt-4 border-t border-red-900/40 flex items-center justify-between text-xs">
               <div className="flex items-center gap-4">
                 <span className="text-zinc-400">
                   P1: <strong className="text-white text-sm">{filteredEntries[0].p1Score}</strong>
@@ -313,27 +306,27 @@ export default function LeaderboardView({
             </div>
           </div>
 
-          {/* Rank #2: RUNNERS (Silver) */}
+          {/* Rank #2: RUNNERS */}
           {filteredEntries.length >= 2 && (
-            <div className="rounded-3xl border-2 border-zinc-400/80 bg-gradient-to-b from-zinc-800/40 via-zinc-950 to-zinc-950 p-6 sm:p-7 flex flex-col justify-between shadow-[0_0_40px_rgba(212,212,216,0.1)] relative overflow-hidden group">
-              <div className="absolute -right-8 -top-8 w-44 h-44 bg-zinc-400/10 rounded-full blur-3xl group-hover:bg-zinc-400/20 transition-all pointer-events-none" />
+            <div
+              onMouseEnter={() => handleHoverCelebration(true)}
+              className="rounded-3xl border-2 border-zinc-400/80 hover:border-zinc-200 bg-gradient-to-b from-zinc-800/40 via-zinc-950 to-zinc-950 p-6 sm:p-7 flex flex-col justify-between shadow-[0_0_40px_rgba(212,212,216,0.1)] hover:shadow-[0_0_60px_rgba(212,212,216,0.25)] hover:scale-[1.015] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+            >
+              <div className="absolute -right-8 -top-8 w-44 h-44 bg-zinc-400/10 rounded-full blur-3xl group-hover:bg-zinc-400/25 transition-all pointer-events-none" />
 
               <div>
                 <div className="flex items-center justify-between mb-5">
                   <span className="px-4 py-1.5 rounded-xl bg-zinc-300 text-black text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-zinc-300/20">
                     <Medal className="w-4 h-4 text-black fill-black" /> #2 RUNNERS
                   </span>
-                  <span className="text-xs font-bold text-zinc-300 bg-zinc-900 px-3 py-1.5 rounded-xl border border-zinc-800">
-                    {filteredEntries[1].languages.join(" · ").toUpperCase() || "C++"}
-                  </span>
                 </div>
 
                 <div className="mb-6">
                   <h3 className="text-3xl font-black text-zinc-100 tracking-tight mb-1">
-                    RUNNERS
+                    {filteredEntries[1].participant.name}
                   </h3>
-                  <p className="text-xs text-zinc-400 uppercase tracking-widest font-bold">
-                    2nd Place Runner-Up · DSA Master
+                  <p className="text-xs text-zinc-400 font-bold tracking-wide">
+                    {filteredEntries[1].participant.email} · 2nd Place Runner-Up
                   </p>
                 </div>
 
@@ -384,17 +377,46 @@ export default function LeaderboardView({
         </div>
       )}
 
-      {/* Main Standings Table Roster */}
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-950 overflow-hidden shadow-2xl">
+      {/* 3. Search Toolbar */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-zinc-950 border border-red-950/90 shadow-[0_0_30px_rgba(220,38,38,0.1)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search Field */}
+        <div className="relative flex-1 w-full group">
+          <Search className="w-4 h-4 text-red-500 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-red-400 transition-colors" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search candidate by name or email address..."
+            className="w-full bg-zinc-900/90 border border-red-950 focus:border-red-600 focus:ring-2 focus:ring-red-600/20 text-zinc-100 text-xs sm:text-sm rounded-2xl pl-11 pr-10 py-3 outline-none font-mono transition-all placeholder:text-zinc-500 shadow-inner"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-red-400 cursor-pointer p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Counter Badge */}
+        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+          <span className="px-4 py-2.5 rounded-2xl bg-red-950/40 border border-red-900/60 text-xs text-red-300 font-bold tracking-wide shadow-inner">
+            Showing <strong className="text-white">{filteredEntries.length}</strong> of <strong className="text-white">{leaderboardEntries.length}</strong> candidates
+          </span>
+        </div>
+      </div>
+
+      {/* 4. Main Standings Table Roster */}
+      <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 overflow-hidden shadow-2xl">
         <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/60 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
-            <Zap className="w-4 h-4 text-red-500" />
             <span className="uppercase tracking-wider">
               FULL CANDIDATE ROSTER STANDINGS ({filteredEntries.length})
             </span>
           </div>
           <span className="text-xs text-zinc-400">
-            Click P1/P2 buttons to view reverse code flaw deductions
+            Click P1/P2 to inspect submission evaluation details
           </span>
         </div>
 
@@ -404,19 +426,18 @@ export default function LeaderboardView({
               <tr className="border-b border-zinc-800 bg-zinc-900/40 text-[11px] text-zinc-400 uppercase tracking-wider">
                 <th className="py-4 px-4 text-center w-16">Rank</th>
                 <th className="py-4 px-4">Candidate</th>
-                <th className="py-4 px-4 text-center">Languages</th>
                 <th className="py-4 px-4 text-center">P1 (Lodge Escape)</th>
                 <th className="py-4 px-4 text-center">P2 (Das&apos;s Gang)</th>
                 <th className="py-4 px-4 text-center">Tab Switches</th>
                 <th className="py-4 px-4 text-center">Total Deductions</th>
                 <th className="py-4 px-4 text-right pr-6">Final Score</th>
-                <th className="py-4 px-4 text-center">Inspect Flaws</th>
+                <th className="py-4 px-4 text-center">Inspect Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-900 text-xs">
               {filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-zinc-500">
+                  <td colSpan={8} className="py-12 text-center text-zinc-500">
                     No matching candidate found in the standings roster.
                   </td>
                 </tr>
@@ -429,11 +450,12 @@ export default function LeaderboardView({
                   return (
                     <tr
                       key={entry.participant.id}
-                      className={`hover:bg-zinc-900/60 transition-colors ${
+                      onMouseEnter={() => handleHoverCelebration(idx === 1)}
+                      className={`hover:bg-zinc-900/80 transition-all cursor-pointer ${
                         isCurrent
                           ? "bg-red-950/20 border-l-4 border-l-red-600"
                           : isWinner
-                          ? "bg-amber-950/10"
+                          ? "bg-red-950/10"
                           : isRunner
                           ? "bg-zinc-900/30"
                           : ""
@@ -444,11 +466,11 @@ export default function LeaderboardView({
                         <span
                           className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-xs font-black shadow-md ${
                             isWinner
-                              ? "bg-amber-500 text-black ring-2 ring-amber-400/50"
+                              ? "bg-red-600 text-white ring-2 ring-red-500/50"
                               : isRunner
                               ? "bg-zinc-300 text-black ring-2 ring-zinc-300/50"
                               : idx === 2
-                              ? "bg-amber-800 text-amber-100 border border-amber-700"
+                              ? "bg-zinc-800 text-zinc-300 border border-zinc-700"
                               : "bg-zinc-900 text-zinc-400 border border-zinc-800"
                           }`}
                         >
@@ -463,18 +485,26 @@ export default function LeaderboardView({
                             <span
                               className={`font-bold text-sm ${
                                 isWinner
-                                  ? "text-amber-400 font-black"
+                                  ? "text-red-500 font-black"
                                   : isRunner
                                   ? "text-zinc-200 font-black"
                                   : "text-white"
                               }`}
                             >
-                              {isWinner
-                                ? "WINNER"
-                                : isRunner
-                                ? "RUNNERS"
-                                : entry.participant.name}
+                              {entry.participant.name}
                             </span>
+
+                            {isWinner && (
+                              <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[9px] font-black tracking-wider">
+                                WINNER
+                              </span>
+                            )}
+
+                            {isRunner && (
+                              <span className="px-2 py-0.5 rounded bg-zinc-700 text-zinc-200 text-[9px] font-bold tracking-wider">
+                                RUNNER
+                              </span>
+                            )}
 
                             {isCurrent && (
                               <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[9px] font-bold tracking-wider">
@@ -484,34 +514,14 @@ export default function LeaderboardView({
 
                             {entry.isManual && (
                               <span
-                                title="Judged manually by administrator"
-                                className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 text-[9px] border border-purple-800 font-bold"
+                                title="Reviewed manually by judge"
+                                className="px-2 py-0.5 rounded bg-red-950 text-red-300 text-[9px] border border-red-800 font-bold"
                               >
-                                JUDGE OVERRIDE
+                                MANUAL GRADE
                               </span>
                             )}
                           </div>
-                          {!isWinner && !isRunner && (
-                            <span className="text-[10px] text-zinc-500">{entry.participant.email}</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Languages */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {entry.languages.length > 0 ? (
-                            entry.languages.map((l) => (
-                              <span
-                                key={l}
-                                className="px-2.5 py-0.5 rounded-lg bg-zinc-900 text-zinc-300 text-[10px] uppercase border border-zinc-800 font-bold"
-                              >
-                                {l}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-zinc-600 text-[10px]">C++</span>
-                          )}
+                          <span className="text-[10px] text-zinc-500">{entry.participant.email}</span>
                         </div>
                       </td>
 
@@ -519,7 +529,7 @@ export default function LeaderboardView({
                       <td className="py-4 px-4 text-center">
                         {entry.p1Sub ? (
                           entry.p1Sub.status === "pending" || entry.p1Sub.status === "evaluating" ? (
-                            <span className="text-amber-400 font-medium italic text-[10px] animate-pulse">
+                            <span className="text-red-400 font-medium italic text-[10px] animate-pulse">
                               EVALUATING
                             </span>
                           ) : (
@@ -537,7 +547,7 @@ export default function LeaderboardView({
                       <td className="py-4 px-4 text-center">
                         {entry.p2Sub ? (
                           entry.p2Sub.status === "pending" || entry.p2Sub.status === "evaluating" ? (
-                            <span className="text-amber-400 font-medium italic text-[10px] animate-pulse">
+                            <span className="text-red-400 font-medium italic text-[10px] animate-pulse">
                               EVALUATING
                             </span>
                           ) : (
@@ -581,7 +591,7 @@ export default function LeaderboardView({
                         <span
                           className={
                             isWinner
-                              ? "text-amber-400 text-lg drop-shadow"
+                              ? "text-red-500 text-lg drop-shadow"
                               : isRunner
                               ? "text-zinc-200 text-lg"
                               : "text-white"
@@ -598,7 +608,7 @@ export default function LeaderboardView({
                             <button
                               onClick={() => setSelectedSubmission(entry.p1Sub!)}
                               className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-red-950 text-zinc-300 hover:text-red-300 border border-zinc-800 hover:border-red-700 text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center gap-1"
-                              title="Inspect Problem 1 Flaw Breakdown"
+                              title="Inspect Problem 1 Evaluation Details"
                             >
                               <FileCode2 className="w-3 h-3 text-red-400" />
                               <span>P1</span>
@@ -611,7 +621,7 @@ export default function LeaderboardView({
                             <button
                               onClick={() => setSelectedSubmission(entry.p2Sub!)}
                               className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-red-950 text-zinc-300 hover:text-red-300 border border-zinc-800 hover:border-red-700 text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center gap-1"
-                              title="Inspect Problem 2 Flaw Breakdown"
+                              title="Inspect Problem 2 Evaluation Details"
                             >
                               <FileCode2 className="w-3 h-3 text-red-400" />
                               <span>P2</span>
@@ -634,41 +644,23 @@ export default function LeaderboardView({
       {selectedSubmission && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in font-mono">
           <div className="max-w-xl w-full rounded-3xl border border-red-900 bg-zinc-950 p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto space-y-4">
-            {(() => {
-              const subEntryIdx = leaderboardEntries.findIndex(
-                (e) => e.participant.id === selectedSubmission.participantId
-              );
-              const displayName =
-                subEntryIdx === 0
-                  ? "WINNER"
-                  : subEntryIdx === 1
-                  ? "RUNNERS"
-                  : selectedSubmission.participantName;
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>{selectedSubmission.participantName}</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-lg bg-red-950 text-red-300 border border-red-800 font-bold">
+                    {selectedSubmission.problemTitle}
+                  </span>
+                </h3>
+              </div>
 
-              return (
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
-                  <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <span>{displayName}</span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-lg bg-red-950 text-red-300 border border-red-800 font-bold">
-                        {selectedSubmission.problemTitle}
-                      </span>
-                    </h3>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Language: {selectedSubmission.language.toUpperCase()} · Evaluator:{" "}
-                      {selectedSubmission.evaluation?.evaluatorType || "AI Reverse Engine"}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedSubmission(null)}
-                    className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })()}
+              <button
+                onClick={() => setSelectedSubmission(null)}
+                className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             {/* Score summary box */}
             <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 flex justify-between items-center">
@@ -681,14 +673,14 @@ export default function LeaderboardView({
             {/* Defects breakdown */}
             <div className="space-y-3 text-xs">
               <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                Reverse Flaw Deductions
+                Evaluation Breakdown
               </h4>
 
               {/* Syntax Errors */}
               {selectedSubmission.evaluation?.syntaxErrors &&
                 selectedSubmission.evaluation.syntaxErrors.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="text-[11px] text-amber-400 font-bold">Syntax Flaws:</div>
+                    <div className="text-[11px] text-red-400 font-bold">Syntax Errors:</div>
                     {selectedSubmission.evaluation.syntaxErrors.map((err, i) => (
                       <div
                         key={i}
@@ -726,7 +718,7 @@ export default function LeaderboardView({
               {selectedSubmission.evaluation?.edgeCaseErrors &&
                 selectedSubmission.evaluation.edgeCaseErrors.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="text-[11px] text-zinc-400 font-bold">Edge Cases Missed:</div>
+                    <div className="text-[11px] text-red-400 font-bold">Boundary Cases Missed:</div>
                     {selectedSubmission.evaluation.edgeCaseErrors.map((err, i) => (
                       <div
                         key={i}
@@ -746,12 +738,12 @@ export default function LeaderboardView({
                 !selectedSubmission.evaluation?.edgeCaseErrors?.length && (
                   <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2 font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Flawless code! Zero defects detected by the reverse evaluator.</span>
+                    <span>Flawless execution! All test cases passed successfully.</span>
                   </div>
                 )}
             </div>
 
-            {/* AI Notes */}
+            {/* Evaluator Feedback */}
             {selectedSubmission.evaluation?.aiFeedback && (
               <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 italic">
                 &ldquo;{selectedSubmission.evaluation.aiFeedback}&rdquo;
