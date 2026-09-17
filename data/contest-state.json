@@ -1,14 +1,13 @@
 {
   "code": "BLIND2026",
   "name": "LOGIN 2K26 // BLIND CODING ARENA",
-  "status": "ACTIVE",
+  "status": "WAITING",
   "currentRound": 1,
   "round2Unlocked": false,
-  "round1DurationMinutes": 25,
+  "backgroundMusicEnabled": true,
+  "round1DurationMinutes": 10,
   "round2DurationMinutes": 35,
   "durationMinutes": 60,
-  "startedAt": "2026-09-16T10:53:04.302Z",
-  "round1StartedAt": "2026-09-16T10:53:04.302Z",
   "participants": [
     {
       "id": "p-demo-1",
@@ -16,11 +15,11 @@
       "email": "shadow@psgtech.ac.in",
       "phone": "+91 9876543210",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T10:40:54.275Z",
+      "joinedAt": "2026-09-16T12:20:48.766Z",
       "currentProblemIndex": 2,
       "completed": true,
       "totalScore": 175,
-      "lastActive": "2026-09-16T10:52:54.275Z"
+      "lastActive": "2026-09-16T12:32:48.766Z"
     },
     {
       "id": "p-demo-2",
@@ -28,11 +27,11 @@
       "email": "viper@psgtech.ac.in",
       "phone": "+91 9876543211",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T10:44:54.275Z",
+      "joinedAt": "2026-09-16T12:24:48.766Z",
       "currentProblemIndex": 2,
       "completed": true,
       "totalScore": 155,
-      "lastActive": "2026-09-16T10:52:54.275Z"
+      "lastActive": "2026-09-16T12:32:48.766Z"
     },
     {
       "id": "p-demo-3",
@@ -40,25 +39,11 @@
       "email": "knight@psgtech.ac.in",
       "phone": "+91 9876543212",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T10:48:54.275Z",
+      "joinedAt": "2026-09-16T12:28:48.766Z",
       "currentProblemIndex": 1,
       "completed": false,
       "totalScore": 90,
-      "lastActive": "2026-09-16T10:52:54.275Z"
-    },
-    {
-      "id": "p-1789555980663-eprne",
-      "name": "uerhgiu",
-      "email": "SUDNIUBwuvb@as.ocm",
-      "phone": "96325874010",
-      "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T10:53:00.663Z",
-      "currentProblemIndex": 1,
-      "completed": false,
-      "totalScore": 0,
-      "lastActive": "2026-09-16T10:54:57.593Z",
-      "tabSwitchCount": 1,
-      "tabSwitchPenalty": 0
+      "lastActive": "2026-09-16T12:32:48.766Z"
     }
   ],
   "submissions": [
@@ -71,7 +56,7 @@
       "problemTitle": "Linked List — Remove Duplicates",
       "language": "cpp",
       "code": "ListNode* removeDuplicates(ListNode* head) {\n    if (!head) return nullptr;\n    ListNode* current = head;\n    while (current != nullptr) {\n        ListNode* runner = current;\n        while (runner->next != nullptr) {\n            if (runner->next->val == current->val) {\n                ListNode* temp = runner->next;\n                runner->next = runner->next->next;\n                delete temp;\n            } else {\n                runner = runner->next;\n            }\n        }\n        current = current->next;\n    }\n    return head;\n}",
-      "submittedAt": "2026-09-16T10:42:54.275Z",
+      "submittedAt": "2026-09-16T12:22:48.766Z",
       "status": "completed",
       "evaluation": {
         "score": 100,
@@ -80,7 +65,7 @@
         "logicErrors": [],
         "edgeCaseErrors": [],
         "aiFeedback": "Superb in-place duplicate removal implementation! O(n²) time, O(1) space with proper node memory cleanup.",
-        "evaluatedAt": "2026-09-16T10:43:54.275Z",
+        "evaluatedAt": "2026-09-16T12:23:48.766Z",
         "evaluatorType": "gemini",
         "modelUsed": "Gemini 1.5 Flash"
       }
@@ -94,7 +79,7 @@
       "problemTitle": "Circular Queue — Basic Implementation",
       "language": "cpp",
       "code": "class CircularQueue {\n    int arr[5];\n    int front = 0, rear = -1, size = 0, CAPACITY = 5;\npublic:\n    bool enqueue(int x) {\n        if (isFull()) return false;\n        rear = (rear + 1) % CAPACITY;\n        arr[rear] = x;\n        size++;\n        return true;\n    }\n    bool dequeue() {\n        if (isEmpty()) return false;\n        front = (front + 1) % CAPACITY;\n        size--;\n        return true;\n    }\n    int peek() { return isEmpty() ? -1 : arr[front]; }\n    bool isEmpty() { return size == 0; }\n    bool isFull() { return size == CAPACITY; }\n};",
-      "submittedAt": "2026-09-16T10:47:54.275Z",
+      "submittedAt": "2026-09-16T12:27:48.766Z",
       "status": "completed",
       "evaluation": {
         "score": 100,
@@ -103,24 +88,10 @@
         "logicErrors": [],
         "edgeCaseErrors": [],
         "aiFeedback": "Clean ring buffer circular queue! Handles modulo index wrapping, front/rear management, and size tracking cleanly without shifting elements.",
-        "evaluatedAt": "2026-09-16T10:48:54.275Z",
+        "evaluatedAt": "2026-09-16T12:28:48.766Z",
         "evaluatorType": "ollama",
         "modelUsed": "Ollama (Llama 3)"
       }
-    },
-    {
-      "id": "sub-1789556097593-nfjm",
-      "participantId": "p-1789555980663-eprne",
-      "participantName": "uerhgiu",
-      "contestCode": "BLIND2026",
-      "problemId": "p1-linked-list",
-      "problemTitle": "Linked List — Remove Duplicates",
-      "language": "cpp",
-      "code": "abau sef s fusdfbundfdsnfsjdnf",
-      "submittedAt": "2026-09-16T10:54:57.593Z",
-      "status": "pending",
-      "tabSwitchCount": 1,
-      "tabSwitchPenalty": 0
     }
   ]
 }
