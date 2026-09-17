@@ -122,5 +122,6 @@
       "tabSwitchCount": 1,
       "tabSwitchPenalty": 0
     }
-  ]
+  ],
+  "backgroundMusicEnabled": true
 }
