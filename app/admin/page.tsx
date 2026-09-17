@@ -19,10 +19,16 @@ import {
   KeyRound,
   LogIn,
   LogOut,
-  Volume2,
-  VolumeX,
   Music,
   Trophy,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Filter,
+  BarChart3,
+  Sparkles,
+  Check,
+  XCircle,
 } from "lucide-react";
 import { Submission, ContestState, ErrorItem, AiProvider } from "@/lib/types";
 
@@ -197,7 +203,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        const label = problemId === "p1-linked-list" ? "Q1" : problemId === "p2-queues" ? "Q2" : "All";
+        const label = problemId === "p2-stack-lodge" ? "Problem 1 (Stack)" : problemId === "p3-linkedlist-gang" ? "Problem 2 (Linked List)" : "All Questions";
         setSuccessMessage(`Evaluated ${data.evaluatedCount} pending submissions for ${label}.`);
         loadData();
         setTimeout(() => setSuccessMessage(null), 4000);
@@ -305,21 +311,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleToggleMusic = async () => {
-    try {
-      const res = await fetch("/api/contest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle_music" }),
-      });
-      if (res.ok) {
-        loadData();
-      }
-    } catch (err) {
-      alert("Failed to toggle background music");
-    }
-  };
-
   const handleSetMusicVolume = async (volume: number) => {
     try {
       const res = await fetch("/api/contest", {
@@ -343,7 +334,7 @@ export default function AdminPage() {
         body: JSON.stringify({ action: "skip_track" }),
       });
       if (res.ok) {
-        setSuccessMessage("Music skipped to next song in circle for all candidates!");
+        setSuccessMessage("Music skipped to next song for all candidates!");
         loadData();
         setTimeout(() => setSuccessMessage(null), 3000);
       }
@@ -389,7 +380,7 @@ export default function AdminPage() {
     }
   };
 
-  // Save AI Config (Gemini / Ollama / OpenAI)
+  // Save AI Config
   const handleSaveAiConfig = async () => {
     setIsSavingAiConfig(true);
     try {
@@ -523,58 +514,71 @@ export default function AdminPage() {
     }
   };
 
-  // -------------------------------------------------------------
-  // IF NOT AUTHENTICATED: Render Clean Admin Login Portal
-  // -------------------------------------------------------------
+  // Question-Wise Evaluation Data Computation
+  const p1Subs = submissions.filter((s) => s.problemId === "p2-stack-lodge");
+  const p2Subs = submissions.filter((s) => s.problemId === "p3-linkedlist-gang");
+
+  const p1Evaluated = p1Subs.filter((s) => s.status === "completed" || s.status === "manual_reviewed");
+  const p1Pending = p1Subs.filter((s) => s.status === "pending" || s.status === "evaluating");
+  const p1Corrects = p1Subs.filter((s) => (s.evaluation?.score ?? 0) >= 80);
+
+  const p2Evaluated = p2Subs.filter((s) => s.status === "completed" || s.status === "manual_reviewed");
+  const p2Pending = p2Subs.filter((s) => s.status === "pending" || s.status === "evaluating");
+  const p2Corrects = p2Subs.filter((s) => (s.evaluation?.score ?? 0) >= 80);
+
+  const totalPending = p1Pending.length + p2Pending.length;
+  const totalCorrects = p1Corrects.length + p2Corrects.length;
+  const totalEvaluated = p1Evaluated.length + p2Evaluated.length;
+
+  // Render Login Portal if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex flex-col justify-between">
+      <div className="min-h-screen flex flex-col justify-between cyber-bg">
         <Navbar />
-
         <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-          <div className="max-w-sm w-full rounded-lg border border-zinc-800 bg-zinc-950 p-6 sm:p-7 shadow-sm">
+          <div className="max-w-sm w-full rounded-xl border border-red-900/60 bg-zinc-950 p-6 sm:p-7 shadow-2xl">
             <div className="text-center mb-5">
-              <div className="w-9 h-9 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-3">
-                <Lock className="w-4 h-4 text-zinc-300" />
+              <div className="w-12 h-12 rounded-full bg-red-950 border border-red-600/50 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Lock className="w-5 h-5 text-red-500" />
               </div>
-              <h2 className="text-base font-semibold text-zinc-100">
-                Administration Console
+              <h2 className="text-lg font-bold text-white font-mono">
+                Admin Authentication
               </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Authentication required for contest management.
+              <p className="text-xs text-zinc-400 mt-1 font-mono">
+                Enter master passcode to unlock control console.
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-3.5">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                <label className="block text-xs font-medium text-zinc-300 mb-1 font-mono">
                   Master Passcode
                 </label>
                 <div className="relative">
-                  <KeyRound className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
+                  <KeyRound className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-3" />
                   <input
                     type="password"
                     value={inputPassword}
                     onChange={(e) => setInputPassword(e.target.value)}
                     placeholder="Enter passcode"
-                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-500 text-zinc-100 font-mono text-xs rounded-md pl-8 pr-3 py-2 outline-none transition-colors"
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 text-white font-mono text-xs rounded-lg pl-9 pr-3 py-2.5 outline-none transition-all"
                     required
                   />
                 </div>
               </div>
 
               {authError && (
-                <div className="p-2.5 rounded-md bg-red-950/40 border border-red-900/60 text-xs text-red-300">
+                <div className="p-2.5 rounded-lg bg-red-950/60 border border-red-800 text-xs text-red-300 font-mono">
                   {authError}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="btn-primary-red w-full py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn-primary-red w-full py-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Authenticate</span>
+                <LogIn className="w-4 h-4" />
+                <span>Authenticate Root</span>
               </button>
             </form>
           </div>
@@ -583,43 +587,40 @@ export default function AdminPage() {
     );
   }
 
-  // -------------------------------------------------------------
-  // AUTHENTICATED: Full Clean Admin Command Console
-  // -------------------------------------------------------------
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col cyber-bg">
       <Navbar status={contestState?.status || "WAITING"} />
 
       <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
-        {/* Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+        {/* Top Header Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-lg shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold font-mono text-white flex items-center gap-2">
-                Admin Control Center
-                <span className="text-xs px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+              <h1 className="text-xl sm:text-2xl font-black font-mono text-white flex items-center gap-2 tracking-tight">
+                <span>ADMIN CONTROL CENTER</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 font-bold">
                   ROOT
                 </span>
               </h1>
-              <p className="text-xs font-mono text-zinc-400">
-                Contest Lifecycle, Multi-Engine AI Reverse Evaluator & Manual Grading
+              <p className="text-xs font-mono text-zinc-400 mt-0.5">
+                Question-Wise Evaluation · Arena Lifecycle Controls · AI Reverse Evaluator
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {successMessage && (
-              <div className="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-400 text-xs font-mono font-bold">
+              <div className="px-3.5 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-700 text-emerald-300 text-xs font-mono font-bold animate-pulse shadow-md">
                 ✓ {successMessage}
               </div>
             )}
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-600/40 text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-600/60 text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5 text-red-500" />
               Logout
@@ -627,21 +628,21 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Top 2 Control Cards: Arena Controls & Multi-Engine AI Setup */}
+        {/* Top Controls Row: Arena Lifecycle + AI Engine Config */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Arena Lifecycle Controls */}
-          <div className="lg:col-span-5 bg-zinc-950 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono text-zinc-300 uppercase tracking-widest flex items-center gap-2 font-bold">
-                  <Activity className="w-4 h-4 text-red-500" /> Contest State
+          <div className="lg:col-span-6 bg-zinc-950 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+                <span className="text-xs font-mono text-white uppercase tracking-wider flex items-center gap-2 font-black">
+                  <Activity className="w-4 h-4 text-red-500" /> Arena Status Controls
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
+                  className={`px-2.5 py-1 rounded text-xs font-mono font-bold tracking-wider ${
                     contestState?.resultsPublished
-                      ? "bg-purple-950 text-purple-400 border border-purple-800"
+                      ? "bg-purple-950 text-purple-300 border border-purple-800"
                       : contestState?.status === "ACTIVE"
-                      ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
+                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
                       : "bg-zinc-900 text-zinc-400 border border-zinc-800"
                   }`}
                 >
@@ -659,237 +660,134 @@ export default function AdminPage() {
                 </span>
               </div>
 
-              <p className="text-xs font-mono text-zinc-400 mb-4 leading-relaxed">
-                {contestState?.status === "WAITING" && (
-                  <>Click <strong>Start Q1 Demo</strong> to open <strong>Demo Question (Simple Array · 5 Mins, no marks)</strong> for candidates.</>
-                )}
-                {contestState?.status === "ACTIVE" && contestState?.currentRound === 0 && (
-                  <>Q1 Demo is active (5 Mins). Candidates enter 2-min buffer after completing. Click <strong>Start Round 1</strong> to open <strong>Problem 1 (Stack · 25 Mins)</strong>.</>
-                )}
-                {contestState?.status === "ACTIVE" && contestState?.currentRound === 1 && (
-                  <>Round 1 is active (25 Mins). Candidates enter 10-min buffer after completing. Click <strong>Start Round 2</strong> to open <strong>Problem 2 (Linked List · 30 Mins)</strong>.</>
-                )}
-                {contestState?.status === "ACTIVE" && contestState?.currentRound === 2 && !contestState?.resultsPublished && (
-                  <>Round 2 is active (30 Mins). Candidates enter 10-min evaluation buffer. Click <strong>Publish Final Results &amp; Leaderboard</strong> to make standings public.</>
-                )}
-                {contestState?.resultsPublished && (
-                  <>Final standings published! Leaderboard is visible to all candidates.</>
-                )}
-                {contestState?.status === "CLOSED" && (
-                  <>Event is permanently closed. Candidates cannot view leaderboard or sign in.</>
-                )}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-zinc-300 mb-4">
-                <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded border border-zinc-800">
-                  <Users className="w-3.5 h-3.5 text-red-500" />
-                  <span>Participants:</span>
-                  <strong className="text-white ml-1">
-                    {contestState?.participants?.length || 0}
-                  </strong>
-                </div>
-                <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded border border-zinc-800">
-                  <FileCode className="w-3.5 h-3.5 text-red-500" />
-                  <span>Submissions:</span>
-                  <strong className="text-white ml-1">{submissions.length}</strong>
-                </div>
-              </div>
-
-              {/* Data Exports & Music Control */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <a
-                  href="/api/admin/export?type=winners"
-                  download
-                  className="px-3 py-1.5 rounded bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-950/30 text-xs font-mono text-zinc-300 hover:text-emerald-400 transition-colors flex items-center gap-1.5"
-                >
-                  <Save className="w-3.5 h-3.5" /> Export Winners (JSON)
-                </a>
-                <a
-                  href="/api/admin/export?type=participants"
-                  download
-                  className="px-3 py-1.5 rounded bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-blue-950/30 text-xs font-mono text-zinc-300 hover:text-blue-400 transition-colors flex items-center gap-1.5"
-                >
-                  <Save className="w-3.5 h-3.5" /> Export All Data (JSON)
-                </a>
-                <div className="flex flex-wrap items-center gap-1.5 bg-zinc-900 p-1.5 rounded border border-zinc-800 text-xs font-mono">
-                  <span className="text-red-400 font-bold flex items-center gap-1 px-1">
-                    <Music className="w-3.5 h-3.5 text-red-500 animate-pulse" /> 3-Song Stream:
-                  </span>
-                  {[0, 0.25, 0.5, 0.75, 1.0].map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => handleSetMusicVolume(v)}
-                      className={`px-2 py-0.5 rounded text-[11px] font-mono transition-all cursor-pointer ${
-                        (contestState?.backgroundMusicVolume ?? 0.25) === v
-                          ? "bg-red-950 text-red-300 font-bold border border-red-700"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                      title={`Set global music volume to ${v * 100}%`}
-                    >
-                      {v === 0 ? "Mute" : `${v * 100}%`}
-                    </button>
-                  ))}
-                  <button
-                    onClick={handleSkipMusicTrack}
-                    className="px-2.5 py-0.5 rounded bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-mono font-bold transition-all cursor-pointer border border-red-700 ml-1"
-                    title="Skip to next song in 3-song playlist for all participants"
-                  >
-                    Skip Song ⏭️
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-3 border-t border-zinc-900">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Action Buttons Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {contestState?.status === "WAITING" && (
                   <button
                     onClick={handleStartDemo}
-                    className="btn-primary-red py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn-primary-red py-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                   >
                     <Play className="w-3.5 h-3.5" />
                     Start Q1 Demo (5 Mins)
                   </button>
                 )}
 
-                {(contestState?.status === "WAITING" || contestState?.currentRound === 0) && (
-                  <button
-                    onClick={handleStartRound1}
-                    className="py-2 rounded-lg bg-zinc-900 border border-red-700/80 hover:bg-red-950 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 text-red-500" />
-                    Start Round 1 (P1 · 25 Mins)
-                  </button>
-                )}
+                <button
+                  onClick={handleStartRound1}
+                  className="py-2.5 rounded-lg bg-zinc-900 border border-red-800/80 hover:bg-red-950 hover:border-red-600 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 text-red-500" />
+                  Start Round 1 (P1 · 25 Mins)
+                </button>
 
-                {(contestState?.currentRound === 1 || contestState?.currentRound === 0) && (
-                  <button
-                    onClick={handleStartRound2}
-                    className="py-2 rounded-lg bg-zinc-900 border border-red-700/80 hover:bg-red-950 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 text-red-500" />
-                    Start Round 2 (P2 · 30 Mins)
-                  </button>
-                )}
+                <button
+                  onClick={handleStartRound2}
+                  className="py-2.5 rounded-lg bg-zinc-900 border border-red-800/80 hover:bg-red-950 hover:border-red-600 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 text-red-500" />
+                  Start Round 2 (P2 · 30 Mins)
+                </button>
 
                 {!contestState?.resultsPublished && (
                   <button
                     onClick={handlePublishResults}
-                    className="btn-primary-red py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
+                    className="btn-primary-red py-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
                   >
-                    <Trophy className="w-3.5 h-3.5 text-yellow-300" />
+                    <Trophy className="w-3.5 h-3.5 text-amber-300" />
                     Publish Results &amp; Leaderboard 🔓
                   </button>
                 )}
               </div>
 
-              <div className="flex w-full gap-2 pt-1">
-                <button
-                  onClick={handleCloseContest}
-                  className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-900 hover:bg-red-950/50 text-red-400 hover:text-red-300 font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                  title="Close the event permanently"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  Close Event
-                </button>
+              {/* Reset & Close Buttons */}
+              <div className="flex gap-2 pt-1 border-t border-zinc-900">
                 <button
                   onClick={handleResetContest}
-                  className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                  title="Reset back to Lobby"
+                  className="flex-1 py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-amber-600 hover:bg-amber-950/30 text-amber-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reset to Lobby
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset to Lobby
+                </button>
+                <button
+                  onClick={handleCloseContest}
+                  className="flex-1 py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-600 hover:bg-red-950/40 text-red-400 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" /> Close Event
                 </button>
               </div>
             </div>
 
-            {/* Q1 / Q2 / All Batch Evaluation Actions */}
-            <div className="pt-3 mt-3 border-t border-zinc-900 space-y-2">
-              <span className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-wider block">
-                Batch Evaluation Controls:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleEvaluateBatch("p2-stack-lodge")}
-                  disabled={isEvaluatingAll}
-                  className="py-2 px-2 rounded bg-zinc-900 border border-zinc-800 hover:border-red-600 hover:bg-zinc-800 text-zinc-200 font-mono text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Evaluate Problem 1 (Stack) submissions"
-                >
-                  <Activity className="w-3.5 h-3.5 text-amber-500" />
-                  {isEvaluatingAll && evaluatingProblemId === "p2-stack-lodge" ? "Evaluating P1..." : "Evaluate P1 (Stack)"}
-                </button>
-
-                <button
-                  onClick={() => handleEvaluateBatch("p3-linkedlist-gang")}
-                  disabled={isEvaluatingAll}
-                  className="py-2 px-2 rounded bg-zinc-900 border border-zinc-800 hover:border-red-600 hover:bg-zinc-800 text-zinc-200 font-mono text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Evaluate Problem 2 (Linked List) submissions"
-                >
-                  <Activity className="w-3.5 h-3.5 text-blue-500" />
-                  {isEvaluatingAll && evaluatingProblemId === "p3-linkedlist-gang" ? "Evaluating P2..." : "Evaluate P2 (Linked List)"}
-                </button>
-
-                <button
-                  onClick={() => handleEvaluateBatch("all")}
-                  disabled={isEvaluatingAll}
-                  className="py-2 px-2 rounded bg-zinc-900 border border-zinc-700 hover:bg-red-950/40 hover:border-red-600 text-white font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Evaluate all pending submissions"
-                >
-                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                  {isEvaluatingAll && evaluatingProblemId === "all" ? "Evaluating All..." : "Evaluate All"}
-                </button>
-              </div>
-            </div>
-
-            {/* Admin Contest Access Code Creator */}
-            <div className="pt-3 mt-3 border-t border-zinc-900 space-y-2 font-mono text-xs">
-              <div className="flex items-center justify-between">
+            {/* Contest Code & Music Stream */}
+            <div className="mt-4 pt-3 border-t border-zinc-900 space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-red-500" /> Active Contest Access Code:
+                  <KeyRound className="w-3.5 h-3.5 text-red-500" /> Contest Code:
                 </span>
-                <span className="px-2.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 font-extrabold text-xs tracking-wider">
-                  {contestState?.code || "BLIND2026"}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={customContestCode}
+                    onChange={(e) => setCustomContestCode(e.target.value.toUpperCase())}
+                    className="bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1 text-white font-mono uppercase text-xs outline-none w-28"
+                  />
+                  <button
+                    onClick={handleUpdateContestCode}
+                    className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-white font-mono font-bold text-xs transition-all cursor-pointer"
+                  >
+                    Set
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customContestCode}
-                  onChange={(e) => setCustomContestCode(e.target.value.toUpperCase())}
-                  placeholder="Set Access Code (e.g. LOGIN2026)"
-                  className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white font-mono uppercase text-xs outline-none"
-                />
-                <button
-                  onClick={handleUpdateContestCode}
-                  className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-mono font-bold text-xs transition-all cursor-pointer shrink-0"
-                >
-                  Set Access Code
-                </button>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-900/80 p-2 rounded-lg border border-zinc-800">
+                <span className="text-[11px] text-red-400 font-bold flex items-center gap-1">
+                  <Music className="w-3.5 h-3.5 text-red-500 animate-pulse" /> 3-Song Stream:
+                </span>
+                <div className="flex items-center gap-1">
+                  {[0, 0.25, 0.5, 0.75, 1.0].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => handleSetMusicVolume(v)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                        (contestState?.backgroundMusicVolume ?? 0.25) === v
+                          ? "bg-red-950 text-red-300 font-bold border border-red-700"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {v === 0 ? "Mute" : `${v * 100}%`}
+                    </button>
+                  ))}
+                  <button
+                    onClick={handleSkipMusicTrack}
+                    className="px-2 py-0.5 rounded bg-red-900 hover:bg-red-800 text-white text-[10px] font-bold transition-all cursor-pointer border border-red-700"
+                  >
+                    Skip ⏭️
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Multi-Engine AI Setup */}
-          <div className="lg:col-span-7 bg-zinc-950 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono text-zinc-300 uppercase tracking-widest flex items-center gap-2 font-bold">
-                  <Cpu className="w-4 h-4 text-red-500" /> AI Evaluation Engine
+          {/* AI Evaluation Engine Setup */}
+          <div className="lg:col-span-6 bg-zinc-950 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between shadow-2xl">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+                <span className="text-xs font-mono text-white uppercase tracking-wider flex items-center gap-2 font-black">
+                  <Cpu className="w-4 h-4 text-red-500" /> AI Reverse Evaluator Setup
                 </span>
-                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
-                  Active: {selectedProvider.toUpperCase()}
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-800 font-bold">
+                  ACTIVE: {selectedProvider.toUpperCase()}
                 </span>
               </div>
 
               {/* Provider Selection Tabs */}
-              <div className="flex flex-wrap gap-1.5 p-1 bg-zinc-900 rounded-lg border border-zinc-800 mb-3">
+              <div className="flex flex-wrap gap-1 p-1 bg-zinc-900 rounded-lg border border-zinc-800">
                 {(["openrouter", "gemini", "ollama", "openai", "heuristic_fallback"] as AiProvider[]).map((p) => (
                   <button
                     key={p}
                     onClick={() => setSelectedProvider(p)}
-                    className={`flex-1 min-w-[70px] py-1 rounded text-[11px] font-mono uppercase font-semibold transition-all ${
+                    className={`flex-1 min-w-[70px] py-1.5 rounded text-[10px] font-mono uppercase font-bold transition-all cursor-pointer ${
                       selectedProvider === p
-                        ? "bg-red-600 text-white"
+                        ? "bg-red-600 text-white shadow-md"
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -898,26 +796,26 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* OpenRouter Form */}
+              {/* Provider Config Forms */}
               {selectedProvider === "openrouter" && (
-                <div className="space-y-2.5 font-mono text-xs">
+                <div className="space-y-2 font-mono text-xs">
                   <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 space-y-1">
-                    <div className="text-emerald-400 font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <div className="text-emerald-400 font-bold flex items-center gap-1.5 text-[11px]">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Key Loaded from .env (OPEN_ROUTER)
                     </div>
-                    <p className="text-[11px] text-zinc-400">
-                      Using OpenRouter Free Model. If token quota exhausts or rate limit occurs (429), it automatically cascades to Google Gemini, then Ollama, then strict AST inspector.
+                    <p className="text-[10px] text-zinc-400 leading-relaxed">
+                      Cascades to Google Gemini, Ollama, then AST Inspector if rate limited.
                     </p>
                   </div>
                   <div>
-                    <label className="block text-zinc-400 mb-1">OpenRouter Free Model:</label>
+                    <label className="block text-zinc-400 text-[11px] mb-1">OpenRouter Free Model:</label>
                     <select
                       value={openRouterModel}
                       onChange={(e) => setOpenRouterModel(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white outline-none"
+                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white outline-none text-xs"
                     >
-                      <option value="cohere/north-mini-code:free">cohere/north-mini-code:free (Recommended Free Coder)</option>
+                      <option value="cohere/north-mini-code:free">cohere/north-mini-code:free (Recommended)</option>
                       <option value="liquid/lfm-2.5-2.6b:free">liquid/lfm-2.5-2.6b:free (Fast Free)</option>
                       <option value="openrouter/auto">openrouter/auto (Auto-route Free)</option>
                     </select>
@@ -925,13 +823,10 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Provider Configuration Forms */}
               {selectedProvider === "gemini" && (
-                <div className="space-y-2.5 font-mono text-xs">
+                <div className="space-y-2 font-mono text-xs">
                   <div>
-                    <label className="block text-zinc-400 mb-1">
-                      Gemini API Key (or set GEMINI_API_KEY env):
-                    </label>
+                    <label className="block text-zinc-400 text-[11px] mb-1">Gemini API Key:</label>
                     <input
                       type="password"
                       value={geminiApiKey}
@@ -941,13 +836,13 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-zinc-400 mb-1">Model:</label>
+                    <label className="block text-zinc-400 text-[11px] mb-1">Model:</label>
                     <select
                       value={geminiModel}
                       onChange={(e) => setGeminiModel(e.target.value)}
                       className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white outline-none"
                     >
-                      <option value="gemini-1.5-flash">gemini-1.5-flash (Fast & Accurate)</option>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash (Fast &amp; Accurate)</option>
                       <option value="gemini-2.0-flash">gemini-2.0-flash (Latest)</option>
                       <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Reasoning)</option>
                     </select>
@@ -956,9 +851,9 @@ export default function AdminPage() {
               )}
 
               {selectedProvider === "ollama" && (
-                <div className="space-y-2.5 font-mono text-xs">
+                <div className="space-y-2 font-mono text-xs">
                   <div>
-                    <label className="block text-zinc-400 mb-1">Ollama Endpoint:</label>
+                    <label className="block text-zinc-400 text-[11px] mb-1">Ollama Endpoint:</label>
                     <input
                       type="text"
                       value={ollamaEndpoint}
@@ -968,7 +863,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-zinc-400 mb-1">Model:</label>
+                    <label className="block text-zinc-400 text-[11px] mb-1">Model:</label>
                     <input
                       type="text"
                       value={ollamaModel}
@@ -980,50 +875,167 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {selectedProvider === "openai" && (
-                <div className="space-y-2.5 font-mono text-xs">
-                  <div>
-                    <label className="block text-zinc-400 mb-1">OpenAI API Key:</label>
-                    <input
-                      type="password"
-                      value={openaiApiKey}
-                      onChange={(e) => setOpenaiApiKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-zinc-400 mb-1">Model:</label>
-                    <input
-                      type="text"
-                      value={openaiModel}
-                      onChange={(e) => setOpenaiModel(e.target.value)}
-                      placeholder="gpt-4o-mini, gpt-4o"
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-600 rounded px-2.5 py-1.5 text-white outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
               {selectedProvider === "heuristic_fallback" && (
                 <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400">
-                  Multi-Pass AST Inspector strictly scans missing semicolons, unbalanced brackets,
-                  pointer dereferences, and bounds without network overhead.
+                  Multi-Pass AST Inspector strictly scans missing semicolons, unbalanced brackets, pointer dereferences, and bounds without network overhead.
                 </div>
               )}
             </div>
 
             <div className="pt-3 mt-3 border-t border-zinc-900 flex justify-between items-center">
-              <span className="text-[11px] font-mono text-zinc-500">
-                Reverse marking: 100 base minus defects.
+              <span className="text-[10px] font-mono text-zinc-500">
+                Reverse flaw marking: 100 Base score minus defects.
               </span>
               <button
                 onClick={handleSaveAiConfig}
                 disabled={isSavingAiConfig}
-                className="btn-primary-red px-3 py-1.5 rounded text-xs font-mono font-semibold transition-all cursor-pointer"
+                className="btn-primary-red px-3 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer"
               >
-                {isSavingAiConfig ? "Saving..." : "Save Configuration"}
+                {isSavingAiConfig ? "Saving..." : "Save AI Configuration"}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* QUESTION-WISE EVALUATION DASHBOARD (NEW FEATURE) */}
+        <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5 shadow-2xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-800">
+            <div className="flex items-center gap-2 font-mono text-sm font-black text-white uppercase tracking-wider">
+              <BarChart3 className="w-5 h-5 text-red-500" />
+              <span>Question-Wise Evaluation Dashboard</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleEvaluateBatch("all")}
+                disabled={isEvaluatingAll}
+                className="px-3.5 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {isEvaluatingAll && evaluatingProblemId === "all" ? "Evaluating All Questions..." : "Evaluate All Questions"}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
+            {/* Problem 1 Card: Lodge Escape (Stack) */}
+            <div className="rounded-xl border border-amber-900/60 bg-gradient-to-b from-amber-950/30 via-zinc-950 to-zinc-950 p-4 space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-700/60 text-[10px] font-bold uppercase">
+                  Problem 1 (Stack)
+                </span>
+                <span className="text-[11px] text-zinc-400">100 Base Pts</span>
+              </div>
+
+              <h4 className="text-base font-bold text-white truncate">
+                The Lodge Escape
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                <div className="bg-zinc-900/80 p-2 rounded border border-zinc-800">
+                  <span className="text-[10px] text-zinc-400 block uppercase">Submissions</span>
+                  <span className="text-lg font-black text-white">{p1Subs.length}</span>
+                </div>
+                <div className="bg-emerald-950/40 p-2 rounded border border-emerald-900/60">
+                  <span className="text-[10px] text-emerald-400 block uppercase font-bold">Corrects</span>
+                  <span className="text-lg font-black text-emerald-400">{p1Corrects.length}</span>
+                </div>
+                <div className="bg-amber-950/40 p-2 rounded border border-amber-900/60">
+                  <span className="text-[10px] text-amber-400 block uppercase font-bold">Pending</span>
+                  <span className="text-lg font-black text-amber-400">{p1Pending.length}</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => handleEvaluateBatch("p2-stack-lodge")}
+                  disabled={isEvaluatingAll}
+                  className="w-full py-2 px-3 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-600/60 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Activity className="w-3.5 h-3.5 text-amber-400" />
+                  {isEvaluatingAll && evaluatingProblemId === "p2-stack-lodge"
+                    ? "Evaluating Problem 1..."
+                    : `Batch Evaluate P1 (${p1Pending.length} Pending)`}
+                </button>
+              </div>
+            </div>
+
+            {/* Problem 2 Card: Das's Gang (Linked List) */}
+            <div className="rounded-xl border border-blue-900/60 bg-gradient-to-b from-blue-950/30 via-zinc-950 to-zinc-950 p-4 space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-700/60 text-[10px] font-bold uppercase">
+                  Problem 2 (Linked List)
+                </span>
+                <span className="text-[11px] text-zinc-400">100 Base Pts</span>
+              </div>
+
+              <h4 className="text-base font-bold text-white truncate">
+                Das&apos;s Gang
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                <div className="bg-zinc-900/80 p-2 rounded border border-zinc-800">
+                  <span className="text-[10px] text-zinc-400 block uppercase">Submissions</span>
+                  <span className="text-lg font-black text-white">{p2Subs.length}</span>
+                </div>
+                <div className="bg-emerald-950/40 p-2 rounded border border-emerald-900/60">
+                  <span className="text-[10px] text-emerald-400 block uppercase font-bold">Corrects</span>
+                  <span className="text-lg font-black text-emerald-400">{p2Corrects.length}</span>
+                </div>
+                <div className="bg-amber-950/40 p-2 rounded border border-amber-900/60">
+                  <span className="text-[10px] text-amber-400 block uppercase font-bold">Pending</span>
+                  <span className="text-lg font-black text-amber-400">{p2Pending.length}</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => handleEvaluateBatch("p3-linkedlist-gang")}
+                  disabled={isEvaluatingAll}
+                  className="w-full py-2 px-3 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-600/60 text-blue-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Activity className="w-3.5 h-3.5 text-blue-400" />
+                  {isEvaluatingAll && evaluatingProblemId === "p3-linkedlist-gang"
+                    ? "Evaluating Problem 2..."
+                    : `Batch Evaluate P2 (${p2Pending.length} Pending)`}
+                </button>
+              </div>
+            </div>
+
+            {/* Total Arena Evaluation Stats Summary Card */}
+            <div className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900/60 via-zinc-950 to-zinc-950 p-4 space-y-3 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-2.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 text-[10px] font-bold uppercase">
+                    Arena Totals
+                  </span>
+                  <span className="text-[11px] text-zinc-400">200 Max Pts</span>
+                </div>
+
+                <h4 className="text-base font-bold text-white">
+                  Evaluation Overview
+                </h4>
+
+                <div className="space-y-2 pt-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400">Total Submissions:</span>
+                    <strong className="text-white font-black">{submissions.length}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-emerald-400 font-semibold">Total Corrects (≥80 Pts):</span>
+                    <strong className="text-emerald-400 font-black">{totalCorrects}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-amber-400 font-semibold">Total Yet to Evaluate:</span>
+                    <strong className="text-amber-400 font-black">{totalPending}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-400">
+                <span>Evaluated: <strong className="text-white">{totalEvaluated}/{submissions.length}</strong></span>
+                <span className="text-zinc-500">Auto-Refreshes 4s</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1033,26 +1045,26 @@ export default function AdminPage() {
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800">
             <h3 className="font-mono text-xs uppercase tracking-wider font-bold text-white flex items-center gap-2">
               <Users className="w-4 h-4 text-red-500" />
-              Registered Participants ({contestState?.participants?.length || 0})
+              Registered Candidates Roster ({contestState?.participants?.length || 0})
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-mono text-xs">
               <a
                 href="/api/admin/export?type=winners"
                 download="winners_list.json"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded bg-amber-950/70 border border-amber-800 text-amber-300 hover:bg-amber-900 transition-all font-mono text-[11px] font-bold flex items-center gap-1"
+                className="px-3 py-1 rounded bg-amber-950/80 border border-amber-700 text-amber-300 hover:bg-amber-900 transition-all text-[11px] font-bold flex items-center gap-1"
               >
-                🏆 Export Winners JSON
+                🏆 Export Winners (JSON)
               </a>
               <a
                 href="/api/admin/export?type=participants"
                 download="participants_list.json"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 transition-all font-mono text-[11px] font-semibold flex items-center gap-1"
+                className="px-3 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 transition-all text-[11px] font-semibold flex items-center gap-1"
               >
-                📥 Export Participants JSON
+                📥 Export Candidates (JSON)
               </a>
             </div>
           </div>
@@ -1060,24 +1072,24 @@ export default function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs border-collapse">
               <thead>
-                <tr className="border-b border-zinc-800 text-zinc-500 text-[11px] uppercase">
-                  <th className="py-2 px-3">#</th>
-                  <th className="py-2 px-3">Name</th>
-                  <th className="py-2 px-3">Email</th>
-                  <th className="py-2 px-3">Phone</th>
-                  <th className="py-2 px-3">Code</th>
-                  <th className="py-2 px-3 text-right">Score</th>
+                <tr className="border-b border-zinc-800 text-zinc-400 text-[11px] uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Rank #</th>
+                  <th className="py-2.5 px-3">Candidate Name</th>
+                  <th className="py-2.5 px-3">Email Address</th>
+                  <th className="py-2.5 px-3">Phone Number</th>
+                  <th className="py-2.5 px-3">Access Code</th>
+                  <th className="py-2.5 px-3 text-right">Total Score</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-900">
                 {contestState?.participants?.map((p, i) => (
-                  <tr key={p.id} className="hover:bg-zinc-900/40">
-                    <td className="py-2 px-3 text-zinc-600">{i + 1}</td>
-                    <td className="py-2 px-3 text-white font-semibold">{p.name}</td>
-                    <td className="py-2 px-3 text-zinc-300">{p.email || "—"}</td>
-                    <td className="py-2 px-3 text-zinc-400">{p.phone || "—"}</td>
-                    <td className="py-2 px-3 text-zinc-500">{p.contestCode}</td>
-                    <td className="py-2 px-3 text-right font-bold text-red-500">
+                  <tr key={p.id} className="hover:bg-zinc-900/50 transition-colors">
+                    <td className="py-2.5 px-3 font-bold text-zinc-500">#{i + 1}</td>
+                    <td className="py-2.5 px-3 text-white font-bold">{p.name}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{p.email || "—"}</td>
+                    <td className="py-2.5 px-3 text-zinc-400">{p.phone || "—"}</td>
+                    <td className="py-2.5 px-3 text-zinc-500">{p.contestCode}</td>
+                    <td className="py-2.5 px-3 text-right font-black text-red-500 text-sm">
                       {p.totalScore} PTS
                     </td>
                   </tr>
@@ -1090,135 +1102,140 @@ export default function AdminPage() {
         {/* Submissions Queue & Manual Evaluation Suite (SIDE-BY-SIDE LAYOUT) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
           {/* Left Side: Submissions Queue */}
-          <div className="lg:col-span-5 bg-zinc-950 border border-zinc-800 rounded-xl p-5 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-zinc-800">
+          <div className="lg:col-span-6 bg-zinc-950 border border-zinc-800 rounded-xl p-5 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800">
               <h3 className="font-mono text-xs uppercase tracking-wider font-bold text-white flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-red-500" />
                 Submissions Queue ({submissions.length})
               </h3>
+            </div>
 
-              {/* Filtering Toolbar */}
-              <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                {/* Question Filter Tabs */}
-                <div className="flex bg-zinc-900 p-0.5 rounded border border-zinc-800">
-                  <button
-                    onClick={() => setProblemFilter("all")}
-                    className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${
-                      problemFilter === "all" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    All Questions
-                  </button>
-                  <button
-                    onClick={() => setProblemFilter("p1-linked-list")}
-                    className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${
-                      problemFilter === "p1-linked-list" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    Q1 (Linked Lists)
-                  </button>
-                  <button
-                    onClick={() => setProblemFilter("p2-queues")}
-                    className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${
-                      problemFilter === "p2-queues" ? "bg-red-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    Q2 (Queues)
-                  </button>
-                </div>
+            {/* Filtering Toolbar */}
+            <div className="space-y-2.5 font-mono text-xs">
+              {/* Question Filter Tabs */}
+              <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                <button
+                  onClick={() => setProblemFilter("all")}
+                  className={`flex-1 py-1.5 rounded text-[11px] font-bold uppercase transition-all cursor-pointer ${
+                    problemFilter === "all" ? "bg-red-600 text-white shadow-md" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  All Questions ({submissions.length})
+                </button>
+                <button
+                  onClick={() => setProblemFilter("p2-stack-lodge")}
+                  className={`flex-1 py-1.5 rounded text-[11px] font-bold uppercase transition-all cursor-pointer ${
+                    problemFilter === "p2-stack-lodge" ? "bg-red-600 text-white shadow-md" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  P1: Stack ({p1Subs.length})
+                </button>
+                <button
+                  onClick={() => setProblemFilter("p3-linkedlist-gang")}
+                  className={`flex-1 py-1.5 rounded text-[11px] font-bold uppercase transition-all cursor-pointer ${
+                    problemFilter === "p3-linkedlist-gang" ? "bg-red-600 text-white shadow-md" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  P2: Linked List ({p2Subs.length})
+                </button>
+              </div>
 
-                {/* Status Filter Dropdown */}
+              {/* Status Filter Dropdown & Badges */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-zinc-500" /> Status Filter:
+                </span>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded px-2 py-1 text-[11px] outline-none"
+                  className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-red-600 font-mono"
                 >
                   <option value="all">All Statuses</option>
-                  <option value="pending">Pending Evaluation</option>
-                  <option value="ai">AI Evaluated</option>
-                  <option value="manual">Manual Corrected (Preferred)</option>
+                  <option value="pending">Pending (Yet to Evaluate)</option>
+                  <option value="corrects">Corrects / High Performers (≥80 PTS)</option>
+                  <option value="flawed">Flawed / Deductions (&lt;80 PTS)</option>
+                  <option value="manual">Manual Judge Reviewed</option>
                 </select>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs border-collapse min-w-[700px]">
+              <table className="w-full text-left font-mono text-xs border-collapse min-w-[550px]">
                 <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-500 text-[11px] uppercase">
-                    <th className="py-2 px-3">Candidate</th>
-                    <th className="py-2 px-3">Problem</th>
-                    <th className="py-2 px-3 text-center">Status</th>
-                    <th className="py-2 px-3 text-right">Score</th>
-                    <th className="py-2 px-3 text-center">Actions</th>
+                  <tr className="border-b border-zinc-800 text-zinc-400 text-[11px] uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Candidate</th>
+                    <th className="py-2.5 px-3">Question</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-right">Score</th>
+                    <th className="py-2.5 px-3 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-900">
                   {submissions.filter((sub) => {
                     if (problemFilter !== "all" && sub.problemId !== problemFilter) return false;
                     if (statusFilter === "pending" && sub.status !== "pending" && sub.status !== "evaluating") return false;
-                    if (statusFilter === "ai" && (sub.status === "pending" || sub.status === "evaluating" || sub.evaluation?.isManuallyOverridden)) return false;
+                    if (statusFilter === "corrects" && (sub.evaluation?.score ?? 0) < 80) return false;
+                    if (statusFilter === "flawed" && (sub.evaluation?.score ?? 100) >= 80) return false;
                     if (statusFilter === "manual" && !sub.evaluation?.isManuallyOverridden) return false;
                     return true;
                   }).length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-xs font-mono text-zinc-600">
+                      <td colSpan={5} className="text-center py-10 text-xs font-mono text-zinc-500">
                         No matching submissions found for this filter.
                       </td>
                     </tr>
                   ) : (
-                    [...submissions]
+                    submissions
                       .filter((sub) => {
                         if (problemFilter !== "all" && sub.problemId !== problemFilter) return false;
                         if (statusFilter === "pending" && sub.status !== "pending" && sub.status !== "evaluating") return false;
-                        if (statusFilter === "ai" && (sub.status === "pending" || sub.status === "evaluating" || sub.evaluation?.isManuallyOverridden)) return false;
+                        if (statusFilter === "corrects" && (sub.evaluation?.score ?? 0) < 80) return false;
+                        if (statusFilter === "flawed" && (sub.evaluation?.score ?? 100) >= 80) return false;
                         if (statusFilter === "manual" && !sub.evaluation?.isManuallyOverridden) return false;
                         return true;
-                      })
-                      .sort((a, b) => {
-                        const getWeight = (s: typeof a) => {
-                          if (s.status === "pending" || s.status === "evaluating") return 0;
-                          if (s.evaluation?.isManuallyOverridden) return 2;
-                          return 1;
-                        };
-                        return getWeight(a) - getWeight(b);
                       })
                       .map((sub) => {
                         const isSelected = selectedSub?.id === sub.id;
                         const isPending = sub.status === "pending" || sub.status === "evaluating";
                         const isManual = sub.evaluation?.isManuallyOverridden;
-                        
+                        const score = sub.evaluation?.score ?? 0;
+
                         return (
                           <tr
                             key={sub.id}
                             onClick={() => setSelectedSub(sub)}
                             className={`transition-colors cursor-pointer ${
                               isSelected
-                                ? "bg-red-950/20"
-                                : "hover:bg-zinc-900/40"
+                                ? "bg-red-950/30 border-l-2 border-l-red-600"
+                                : "hover:bg-zinc-900/50"
                             }`}
                           >
                             <td className="py-2.5 px-3">
-                              <span className="font-bold text-white block">{sub.participantName}</span>
-                              <span className="text-[10px] text-zinc-500">{sub.language.toUpperCase()}</span>
+                              <span className="font-bold text-white block truncate max-w-[140px]">{sub.participantName}</span>
+                              <span className="text-[10px] text-zinc-500 uppercase">{sub.language}</span>
                             </td>
                             <td className="py-2.5 px-3 text-zinc-300">
                               <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-red-400 mr-1.5">
-                                {sub.problemId === "p1-linked-list" ? "Q1" : "Q2"}
+                                {sub.problemId === "p2-stack-lodge" ? "P1" : "P2"}
                               </span>
-                              {sub.problemTitle}
+                              <span className="text-xs">{sub.problemId === "p2-stack-lodge" ? "Lodge Escape" : "Das's Gang"}</span>
                             </td>
                             <td className="py-2.5 px-3 text-center">
                               {isPending ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-amber-950/50 border border-amber-900/50 text-amber-500 text-[10px] font-semibold">
-                                  PENDING
+                                <span className="inline-block px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-400 text-[10px] font-bold animate-pulse">
+                                  YET TO EVALUATE
                                 </span>
                               ) : isManual ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-purple-950/50 border border-purple-900/50 text-purple-400 text-[10px] font-semibold">
-                                  MANUAL (PREFERRED)
+                                <span className="inline-block px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-300 text-[10px] font-bold">
+                                  JUDGE REVIEWED
+                                </span>
+                              ) : score >= 80 ? (
+                                <span className="inline-block px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-400 text-[10px] font-bold">
+                                  CORRECT (AI)
                                 </span>
                               ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-950/50 border border-emerald-900/50 text-emerald-400 text-[10px] font-semibold">
-                                  EVALUATED (AI)
+                                <span className="inline-block px-2 py-0.5 rounded bg-red-950/60 border border-red-800 text-red-400 text-[10px] font-bold">
+                                  DEFECTS ({100 - score} PTS)
                                 </span>
                               )}
                             </td>
@@ -1227,24 +1244,22 @@ export default function AdminPage() {
                                 <span className="text-zinc-600">—</span>
                               ) : (
                                 <div>
-                                  <span className="font-bold text-red-400">{sub.evaluation?.score ?? 0}</span>
+                                  <span className={`font-bold ${score >= 80 ? "text-emerald-400" : "text-red-400"}`}>{score}</span>
                                   <span className="text-zinc-600 text-[10px]"> / 100</span>
                                 </div>
                               )}
                             </td>
                             <td className="py-2.5 px-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTriggerAiEvaluation(sub.id);
-                                  }}
-                                  disabled={isEvaluatingAi === sub.id}
-                                  className="px-2 py-1 rounded bg-zinc-800 hover:bg-red-600 hover:text-white text-zinc-300 transition-all cursor-pointer text-[10px] font-semibold border border-zinc-700 disabled:opacity-50"
-                                >
-                                  {isEvaluatingAi === sub.id ? "Working..." : "Auto-Grade"}
-                                </button>
-                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTriggerAiEvaluation(sub.id);
+                                }}
+                                disabled={isEvaluatingAi === sub.id}
+                                className="px-2 py-1 rounded bg-zinc-900 hover:bg-red-600 hover:text-white text-zinc-300 transition-all cursor-pointer text-[10px] font-bold border border-zinc-800 disabled:opacity-50"
+                              >
+                                {isEvaluatingAi === sub.id ? "Evaluating..." : "Auto-Grade"}
+                              </button>
                             </td>
                           </tr>
                         );
@@ -1256,7 +1271,7 @@ export default function AdminPage() {
           </div>
 
           {/* Right Side: Manual Evaluation Suite */}
-          <div className="lg:col-span-7 bg-zinc-950 border border-zinc-800 rounded-xl p-5 shadow-xl sticky top-4">
+          <div className="lg:col-span-6 bg-zinc-950 border border-zinc-800 rounded-xl p-5 shadow-xl sticky top-4">
             {selectedSub ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-800">
@@ -1270,7 +1285,7 @@ export default function AdminPage() {
                         </span>
                       )}
                     </h3>
-                    <p className="text-xs font-mono text-zinc-400">
+                    <p className="text-xs font-mono text-zinc-400 mt-0.5">
                       Candidate: <strong className="text-white">{selectedSub.participantName}</strong> ·{" "}
                       <span className="text-red-400">{selectedSub.problemTitle}</span> ({selectedSub.language.toUpperCase()})
                     </p>
@@ -1278,8 +1293,8 @@ export default function AdminPage() {
 
                   <div className="flex items-center gap-3">
                     <div className="text-right font-mono">
-                      <span className="text-[10px] text-zinc-500 block uppercase">Final Grade</span>
-                      <span className="text-2xl font-extrabold text-red-500">
+                      <span className="text-[10px] text-zinc-500 block uppercase font-bold">Awarded Score</span>
+                      <span className="text-2xl font-black text-red-500">
                         {manualScore} <small className="text-xs text-zinc-500">/ 100 PTS</small>
                       </span>
                     </div>
@@ -1289,7 +1304,7 @@ export default function AdminPage() {
                 {/* Candidate's Code with Line Numbers */}
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
-                    <span>Candidate Blind Code Submission</span>
+                    <span>Candidate Code Submission</span>
                     <span className="text-zinc-500">{selectedSub.code.split("\n").length} Lines</span>
                   </div>
                   <div className="rounded-lg bg-black border border-zinc-900 font-mono text-xs text-zinc-300 max-h-56 overflow-y-auto leading-relaxed flex">
@@ -1304,7 +1319,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Quick Score Preset Buttons */}
+                {/* Quick Score Presets */}
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-2">
                   <span className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-wider block">
                     Quick Score Presets:
@@ -1351,19 +1366,19 @@ export default function AdminPage() {
                 {/* Problem-Specific Rubric Presets */}
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-2">
                   <span className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-wider block">
-                    {selectedSub.problemId === "p1-linked-list"
-                      ? "Rubric Presets for Q1 (Linked List Remove Duplicates):"
-                      : "Rubric Presets for Q2 (Circular Queue Basic Implementation):"}
+                    {selectedSub.problemId === "p2-stack-lodge"
+                      ? "Rubric Deductions for P1 (The Lodge Escape · Stack):"
+                      : "Rubric Deductions for P2 (Das's Gang · Linked List Removal):"}
                   </span>
                   <div className="flex flex-wrap gap-1.5 text-xs font-mono">
-                    {selectedSub.problemId === "p1-linked-list" ? (
+                    {selectedSub.problemId === "p2-stack-lodge" ? (
                       <>
                         <button
                           onClick={() => {
                             const newDefect: ErrorItem = {
-                              id: `rub-1-${Date.now()}`,
+                              id: `rub-p1-1-${Date.now()}`,
                               type: "logic",
-                              message: "Used extra space (Set/HashSet/Array) violating O(1) space constraint",
+                              message: "Corrupted LIFO stack ordering (FIFO instead of LIFO)",
                               deduction: 25,
                             };
                             const updated = [...logicErrors, newDefect];
@@ -1372,55 +1387,23 @@ export default function AdminPage() {
                           }}
                           className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-red-300 text-[11px] cursor-pointer"
                         >
-                          + Used Set/Array (-25 pts)
+                          + Corrupted LIFO (-25 pts)
                         </button>
                         <button
                           onClick={() => {
                             const newDefect: ErrorItem = {
-                              id: `rub-2-${Date.now()}`,
-                              type: "logic",
-                              message: "Failed to unlink duplicate node (missing runner.next = runner.next.next)",
-                              deduction: 20,
-                            };
-                            const updated = [...logicErrors, newDefect];
-                            setLogicErrors(updated);
-                            recomputeManualScore(syntaxErrors, updated, edgeCaseErrors);
-                          }}
-                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-300 text-[11px] cursor-pointer"
-                        >
-                          + Didn't Unlink Duplicate (-20 pts)
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newDefect: ErrorItem = {
-                              id: `rub-3-${Date.now()}`,
-                              type: "logic",
-                              message: "No pointer advancement causing infinite loop",
-                              deduction: 20,
-                            };
-                            const updated = [...logicErrors, newDefect];
-                            setLogicErrors(updated);
-                            recomputeManualScore(syntaxErrors, updated, edgeCaseErrors);
-                          }}
-                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-300 text-[11px] cursor-pointer"
-                        >
-                          + No Pointer Advance (-20 pts)
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newDefect: ErrorItem = {
-                              id: `rub-4-${Date.now()}`,
+                              id: `rub-p1-2-${Date.now()}`,
                               type: "edge_case",
-                              message: "Missing null head check",
-                              deduction: 8,
+                              message: "Missing empty stack check on pop/peek",
+                              deduction: 15,
                             };
                             const updated = [...edgeCaseErrors, newDefect];
                             setEdgeCaseErrors(updated);
                             recomputeManualScore(syntaxErrors, logicErrors, updated);
                           }}
-                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[11px] cursor-pointer"
+                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-300 text-[11px] cursor-pointer"
                         >
-                          + Missing Null Check (-8 pts)
+                          + Missing Empty Pop Check (-15 pts)
                         </button>
                       </>
                     ) : (
@@ -1428,9 +1411,9 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             const newDefect: ErrorItem = {
-                              id: `rub-q2-1-${Date.now()}`,
+                              id: `rub-p2-1-${Date.now()}`,
                               type: "logic",
-                              message: "Shifted array elements instead of managing front/rear pointers",
+                              message: "Used extra array/list violating O(1) in-place space constraint",
                               deduction: 25,
                             };
                             const updated = [...logicErrors, newDefect];
@@ -1439,14 +1422,14 @@ export default function AdminPage() {
                           }}
                           className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-red-300 text-[11px] cursor-pointer"
                         >
-                          + Shifted Elements (-25 pts)
+                          + Used Extra Array Space (-25 pts)
                         </button>
                         <button
                           onClick={() => {
                             const newDefect: ErrorItem = {
-                              id: `rub-q2-2-${Date.now()}`,
+                              id: `rub-p2-2-${Date.now()}`,
                               type: "logic",
-                              message: "Missing modulo (% 5) index wrap-around",
+                              message: "Failed to unlink duplicate consecutive target nodes",
                               deduction: 15,
                             };
                             const updated = [...logicErrors, newDefect];
@@ -1455,39 +1438,7 @@ export default function AdminPage() {
                           }}
                           className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-300 text-[11px] cursor-pointer"
                         >
-                          + Missing Modulo Wrap (-15 pts)
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newDefect: ErrorItem = {
-                              id: `rub-q2-3-${Date.now()}`,
-                              type: "logic",
-                              message: "Unchecked overflow before enqueueing",
-                              deduction: 15,
-                            };
-                            const updated = [...logicErrors, newDefect];
-                            setLogicErrors(updated);
-                            recomputeManualScore(syntaxErrors, updated, edgeCaseErrors);
-                          }}
-                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-300 text-[11px] cursor-pointer"
-                        >
-                          + Unchecked Overflow (-15 pts)
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newDefect: ErrorItem = {
-                              id: `rub-q2-4-${Date.now()}`,
-                              type: "logic",
-                              message: "Unchecked underflow before dequeueing or peeking",
-                              deduction: 12,
-                            };
-                            const updated = [...logicErrors, newDefect];
-                            setLogicErrors(updated);
-                            recomputeManualScore(syntaxErrors, updated, edgeCaseErrors);
-                          }}
-                          className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[11px] cursor-pointer"
-                        >
-                          + Unchecked Underflow (-12 pts)
+                          + Unlink Consecutive Fail (-15 pts)
                         </button>
                       </>
                     )}
@@ -1670,15 +1621,16 @@ export default function AdminPage() {
                 <button
                   onClick={handleSaveManualEvaluation}
                   disabled={isSavingManual}
-                  className="btn-primary-red w-full py-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                  className="btn-primary-red w-full py-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 shadow-lg"
                 >
                   <Save className="w-4 h-4" />
                   {isSavingManual ? "Publishing Grade Override..." : "Publish Manual Grade Override"}
                 </button>
               </div>
             ) : (
-              <div className="py-20 text-center text-xs font-mono text-zinc-600">
-                Select a submission from the queue above to open the Manual Evaluation Suite.
+              <div className="py-24 text-center text-xs font-mono text-zinc-600 space-y-2">
+                <Terminal className="w-8 h-8 text-zinc-800 mx-auto" />
+                <p>Select a submission from the queue to open the Manual Evaluation Suite.</p>
               </div>
             )}
           </div>

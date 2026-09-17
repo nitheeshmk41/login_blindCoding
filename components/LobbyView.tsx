@@ -133,7 +133,7 @@ export default function LobbyView({
                   </h2>
                 </div>
                 <div className="hidden sm:block text-right font-mono text-[11px] text-zinc-300 bg-black/70 px-2.5 py-1 rounded border border-zinc-700">
-                  12 DSA Revenge Problems
+                  3 DSA Revenge Problems
                 </div>
               </div>
             </div>

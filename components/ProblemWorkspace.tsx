@@ -63,23 +63,20 @@ export default function ProblemWorkspace({
     currentProblemIdx === 0 ? 5 * 60 : currentProblemIdx === 1 ? 25 * 60 : 30 * 60
   );
 
+  // Track submitted problem IDs in the current session
+  const [submittedProblemIds, setSubmittedProblemIds] = useState<string[]>([]);
+
   // Waiting buffers:
   // After Q1 Demo: 2-minute timer waiting for Admin to start Round 1
-  const [waitingForRound1, setWaitingForRound1] = useState<boolean>(
-    participant.currentProblemIndex === 1 && !round1Unlocked
-  );
+  const [waitingForRound1, setWaitingForRound1] = useState<boolean>(false);
   const [q1BufferSeconds, setQ1BufferSeconds] = useState<number>(2 * 60);
 
   // After Q2 (P1): 10-minute timer waiting for Admin to start Round 2
-  const [waitingForRound2, setWaitingForRound2] = useState<boolean>(
-    participant.currentProblemIndex === 2 && !round2Unlocked
-  );
+  const [waitingForRound2, setWaitingForRound2] = useState<boolean>(false);
   const [q2BufferSeconds, setQ2BufferSeconds] = useState<number>(10 * 60);
 
   // After Q3 (P2): 10-minute evaluation buffer
-  const [waitingForFinalResults, setWaitingForFinalResults] = useState<boolean>(
-    participant.currentProblemIndex === 3 || participant.completed
-  );
+  const [waitingForFinalResults, setWaitingForFinalResults] = useState<boolean>(false);
   const [q3BufferSeconds, setQ3BufferSeconds] = useState<number>(10 * 60);
 
   // Submission state
@@ -108,30 +105,33 @@ export default function ProblemWorkspace({
     } catch (e) {}
   };
 
-  // Sync working timer when active round changes & trigger auto-fullscreen
+  // Sync working timer & reset IDE to blank (no code samples) when active round changes
   useEffect(() => {
     const limit = problem.timeLimitMinutes || (currentProblemIdx === 0 ? 5 : currentProblemIdx === 1 ? 25 : 30);
     setSecondsRemaining(limit * 60);
+
+    // IDE starts completely blank
     setCode("");
+
+    // Sync waiting screen buffers based on active round
+    if (currentRound === 1) {
+      setWaitingForRound1(false);
+      setWaitingForRound2(submittedProblemIds.includes("p2-stack-lodge") && !round2Unlocked);
+      setWaitingForFinalResults(false);
+    } else if (currentRound === 2) {
+      setWaitingForRound1(false);
+      setWaitingForRound2(false);
+      setWaitingForFinalResults(submittedProblemIds.includes("p3-linkedlist-gang") || participant.completed);
+    } else {
+      // Demo Round (0)
+      setWaitingForRound1(submittedProblemIds.includes("p1-demo-array") && !round1Unlocked);
+      setWaitingForRound2(false);
+      setWaitingForFinalResults(false);
+    }
+
     requestFullscreenArena();
     setHasEnteredFullscreen(true);
-  }, [currentRound, currentProblemIdx, problem.timeLimitMinutes]);
-
-  // Transition when Admin starts Round 1 (Q2 Stack)
-  useEffect(() => {
-    if (round1Unlocked || currentRound >= 1) {
-      setWaitingForRound1(false);
-      setHasEnteredFullscreen(true);
-    }
-  }, [round1Unlocked, currentRound]);
-
-  // Transition when Admin starts Round 2 (Q3 Linked List)
-  useEffect(() => {
-    if (round2Unlocked || currentRound >= 2) {
-      setWaitingForRound2(false);
-      setHasEnteredFullscreen(true);
-    }
-  }, [round2Unlocked, currentRound]);
+  }, [currentRound, currentProblemIdx, problem.id, round1Unlocked, round2Unlocked]);
 
   // Anti-cheat tab switch & fullscreen detection
   useEffect(() => {
@@ -329,22 +329,20 @@ export default function ProblemWorkspace({
       if (!res.ok) throw new Error(data.error || "Submission failed");
 
       setSubmissionFeedback(data.submission);
+      setSubmittedProblemIds((prev) => Array.from(new Set([...prev, problem.id])));
       onSubmissionComplete(data.submission);
+      setCode("");
 
-      if (currentProblemIdx === 0) {
+      if (problem.id === "p1-demo-array" || currentProblemIdx === 0) {
         if (!round1Unlocked && currentRound < 1) {
           setWaitingForRound1(true);
         }
-      } else if (currentProblemIdx === 1) {
+      } else if (problem.id === "p2-stack-lodge" || currentProblemIdx === 1) {
         if (!round2Unlocked && currentRound < 2) {
           setWaitingForRound2(true);
         }
       } else {
         setWaitingForFinalResults(true);
-      }
-
-      if (!isAutoSubmit) {
-        setShowAdvanceModal(true);
       }
     } catch (err: unknown) {
       if (!isAutoSubmit) {
@@ -358,11 +356,12 @@ export default function ProblemWorkspace({
   const handleProceedToNext = () => {
     setShowAdvanceModal(false);
     setCode("");
-    if (currentProblemIdx === 0) {
+    const subProblemId = submissionFeedback?.problemId;
+    if (subProblemId === "p1-demo-array") {
       if (!round1Unlocked && currentRound < 1) {
         setWaitingForRound1(true);
       }
-    } else if (currentProblemIdx === 1) {
+    } else if (subProblemId === "p2-stack-lodge") {
       if (!round2Unlocked && currentRound < 2) {
         setWaitingForRound2(true);
       }
@@ -1062,47 +1061,7 @@ export default function ProblemWorkspace({
         </div>
       )}
 
-      {/* Advance Modal */}
-      {showAdvanceModal && submissionFeedback && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90">
-          <div className="max-w-md w-full rounded-lg border border-zinc-800 bg-zinc-950 p-6 shadow-xl relative">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-900 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded bg-zinc-900 border border-zinc-700 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-100">
-                    {currentProblemIdx === 0
-                      ? "Q1 Demo Submitted"
-                      : currentProblemIdx === 1
-                      ? "Problem 1 Submitted"
-                      : "Assessment Concluded"}
-                  </h3>
-                  <p className="text-[11px] font-mono text-zinc-400">
-                    Language: {submissionFeedback.language.toUpperCase()}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div className="mb-5 p-4 rounded bg-zinc-900/40 border border-zinc-800 text-xs text-zinc-400 font-mono text-center">
-              {currentProblemIdx === 0
-                ? "Demo question completed! You will be placed in the 2-minute buffer room until the admin starts Round 1."
-                : currentProblemIdx === 1
-                ? "Problem 1 collected! You will be placed in the 10-minute buffer room until the admin starts Round 2."
-                : "Assessment completed! You will enter the 10-minute evaluation window. Leaderboard will be visible once published by the admin."}
-            </div>
-
-            <button
-              onClick={handleProceedToNext}
-              className="btn-primary-red w-full py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>Proceed →</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
