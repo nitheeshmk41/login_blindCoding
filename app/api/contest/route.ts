@@ -3,14 +3,18 @@ import {
   getContestState,
   joinLobby,
   startContest,
+  startRound1,
   startRound2,
+  publishResults,
   endContest,
   closeContest,
   resetContest,
   updateContestCode,
   toggleBackgroundMusic,
+  skipContestTrack,
 } from "@/lib/contest-store";
 import { CONTEST_PROBLEMS } from "@/lib/problems";
+import { updateContestSettings } from "@/lib/sqlite-db";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +25,20 @@ export async function GET() {
       code: state.code,
       name: state.name,
       status: state.status,
-      currentRound: state.currentRound || 1,
+      currentRound: state.currentRound ?? 0,
+      round1Unlocked: Boolean(state.round1Unlocked),
       round2Unlocked: Boolean(state.round2Unlocked),
+      resultsPublished: Boolean(state.resultsPublished),
       backgroundMusicEnabled: state.backgroundMusicEnabled ?? true,
-      round1DurationMinutes: state.round1DurationMinutes || 10,
-      round2DurationMinutes: state.round2DurationMinutes || 35,
+      backgroundMusicVolume: state.backgroundMusicVolume ?? 0.25,
+      currentTrackIndex: state.currentTrackIndex ?? 0,
+      demoDurationMinutes: state.demoDurationMinutes || 5,
+      round1DurationMinutes: state.round1DurationMinutes || 25,
+      round2DurationMinutes: state.round2DurationMinutes || 30,
+      demoBufferMinutes: state.demoBufferMinutes || 2,
+      round1BufferMinutes: state.round1BufferMinutes || 10,
+      round2BufferMinutes: state.round2BufferMinutes || 10,
+      demoStartedAt: state.demoStartedAt,
       round1StartedAt: state.round1StartedAt,
       round2StartedAt: state.round2StartedAt,
       startedAt: state.startedAt,
@@ -48,6 +61,7 @@ export async function GET() {
       title: p.title,
       topic: p.topic,
       difficulty: p.difficulty,
+      isDemo: p.isDemo,
       baseScore: p.baseScore,
       timeLimitMinutes: p.timeLimitMinutes,
     })),
@@ -75,25 +89,54 @@ export async function POST(req: Request) {
         participant,
         contestStatus: state.status,
         currentRound: state.currentRound,
+        round1Unlocked: state.round1Unlocked,
         round2Unlocked: state.round2Unlocked,
+        resultsPublished: state.resultsPublished,
         backgroundMusicEnabled: state.backgroundMusicEnabled ?? true,
       });
     }
 
-    if (action === "start") {
+    if (action === "start" || action === "start_demo") {
       const state = startContest();
-      return NextResponse.json({ message: "Contest Round 1 started (10 mins)", state });
+      return NextResponse.json({ message: "Demo Round (Q1 · 5 Mins) started", state });
+    }
+
+    if (action === "start_round_1") {
+      const state = startRound1();
+      return NextResponse.json({ message: "Round 1 (Q2 Stack · 25 Mins) started", state });
     }
 
     if (action === "start_round_2") {
       const state = startRound2();
-      return NextResponse.json({ message: "Contest Round 2 started (35 mins)", state });
+      return NextResponse.json({ message: "Round 2 (Q3 Linked List · 30 Mins) started", state });
+    }
+
+    if (action === "publish_results") {
+      const state = publishResults();
+      return NextResponse.json({ message: "Final Results & Leaderboard Published!", state });
     }
 
     if (action === "toggle_music") {
       const state = toggleBackgroundMusic(body.enabled);
       return NextResponse.json({
         message: `Background music ${state.backgroundMusicEnabled ? "enabled" : "disabled"}`,
+        state,
+      });
+    }
+
+    if (action === "set_music_volume") {
+      const vol = Math.max(0, Math.min(1, Number(body.volume ?? 0.25)));
+      const state = updateContestSettings(body.code || "BLIND2026", { backgroundMusicVolume: vol });
+      return NextResponse.json({
+        message: `Background music volume set to ${Math.round(vol * 100)}%`,
+        state,
+      });
+    }
+
+    if (action === "skip_track" || action === "next_track") {
+      const state = skipContestTrack();
+      return NextResponse.json({
+        message: `Background music track skipped to track ${state.currentTrackIndex! + 1}`,
         state,
       });
     }
@@ -125,6 +168,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const isValidationError = message.includes("Invalid Contest Access Code") || message.includes("required") || message.includes("cannot be empty");
+    return NextResponse.json({ error: message }, { status: isValidationError ? 400 : 500 });
   }
 }

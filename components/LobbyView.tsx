@@ -77,6 +77,10 @@ export default function LobbyView({
     setError(null);
 
     try {
+      if (typeof document !== "undefined" && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
       const res = await fetch("/api/contest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,49 +115,87 @@ export default function LobbyView({
         {/* Left Column: Assessment Specifications & Institutional Context */}
         <div className="lg:col-span-6 flex flex-col justify-between rounded-lg border border-zinc-800 bg-zinc-950 p-6 sm:p-7">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-medium">
+            {/* DC Movie 2026 Poster Card */}
+            <div className="relative rounded-lg overflow-hidden border border-red-900/70 shadow-xl mb-5 group">
+              <img
+                src="/dc_movie_full.jpg"
+                alt="DC Movie 2026 Poster"
+                className="w-full h-44 object-cover object-top filter brightness-95 group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
+                <div>
+                  <span className="px-2.5 py-0.5 rounded bg-red-600 text-white font-mono text-[10px] font-bold uppercase tracking-wider">
+                    DC (2026) TAMIL MOVIE EDITION
+                  </span>
+                  <h2 className="text-sm font-mono font-bold text-white mt-1 drop-shadow">
+                    Das • Chandra • Kitty • Karuppu • Sebastian
+                  </h2>
+                </div>
+                <div className="hidden sm:block text-right font-mono text-[11px] text-zinc-300 bg-black/70 px-2.5 py-1 rounded border border-zinc-700">
+                  12 DSA Revenge Problems
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-red-500 font-semibold">
                 PSG College of Technology · MCA
               </span>
               <span className="text-zinc-600 text-xs">/</span>
-              <span className="text-[11px] font-mono text-zinc-500">LOGIN 2026</span>
+              <span className="text-[11px] font-mono text-zinc-400">LOGIN 2026</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-semibold text-zinc-100 tracking-tight mb-2">
-              Blind Coding Assessment Platform
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-100 tracking-tight mb-2">
+              DC 2026 — DSA Revenge Arena
             </h1>
 
-            <p className="text-xs text-zinc-400 leading-relaxed mb-6">
-              A high-precision coding examination where candidates implement data structure algorithms without visual syntax feedback. Grading uses reverse deduction from a base score of 100 points per problem.
+            <p className="text-xs text-zinc-400 leading-relaxed mb-5">
+              Welcome to the DC Movie themed Blind Coding Challenge! Map the film&apos;s high-stakes gang operation, police task force chases, lodge escapes, and revenge traps into core Data Structures &amp; Algorithms.
             </p>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               <div className="flex items-start gap-3 p-3 rounded-md bg-zinc-900/60 border border-zinc-800/80">
                 <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 mt-0.5">
-                  <EyeOff className="w-3.5 h-3.5 text-zinc-300" />
+                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-zinc-200">Round 1: Linked Lists</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">10 Mins</span>
+                    <span className="text-xs font-medium text-zinc-200">Demo Round: Das&apos;s Stolen Money</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">5 Mins</span>
                   </div>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Editor text is blurred with selection disabled. Tests mental pointer modeling and memory layout.
+                    Warmup problem. Editor text is blurred with selection disabled. No marks or evaluation.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3 p-3 rounded-md bg-zinc-900/60 border border-zinc-800/80">
                 <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 mt-0.5">
-                  <Delete className="w-3.5 h-3.5 text-zinc-300" />
+                  <EyeOff className="w-3.5 h-3.5 text-red-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-zinc-200">Round 2: Circular Queues</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">35 Mins</span>
+                    <span className="text-xs font-medium text-zinc-200">Round 1: The Lodge Escape</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-900 font-bold">25 Mins</span>
                   </div>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Pure blackout mode. Backspace and Delete keys are disabled; all typed characters are permanent.
+                    Escape through lodge rooms. Editor text is blurred with selection disabled.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-md bg-zinc-900/60 border border-zinc-800/80">
+                <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <Delete className="w-3.5 h-3.5 text-red-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-200">Round 2: Das&apos;s Gang</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-900 font-bold">30 Mins</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Remove compromised gang members. Pure blackout mode (Backspace &amp; Delete disabled).
                   </p>
                 </div>
               </div>
@@ -164,11 +206,11 @@ export default function LobbyView({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-zinc-200">Proctoring &amp; Scoring</span>
+                    <span className="text-xs font-medium text-zinc-200">Proctoring &amp; AI Reverse Grading</span>
                     <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">100 Base</span>
                   </div>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Fullscreen required. Tab-switching is penalized after 2 warnings (-10 pts each). Graded by OpenRouter AI.
+                    Strict full-screen. Tab switches penalized after 2 warnings (-10 pts). Graded by AI Evaluator.
                   </p>
                 </div>
               </div>

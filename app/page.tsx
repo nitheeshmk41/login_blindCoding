@@ -10,8 +10,10 @@ import { Participant, ContestStatus, Submission } from "@/lib/types";
 export default function HomePage() {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [contestStatus, setContestStatus] = useState<ContestStatus>("WAITING");
-  const [currentRound, setCurrentRound] = useState<1 | 2>(1);
+  const [currentRound, setCurrentRound] = useState<0 | 1 | 2>(0);
+  const [round1Unlocked, setRound1Unlocked] = useState<boolean>(false);
   const [round2Unlocked, setRound2Unlocked] = useState<boolean>(false);
+  const [resultsPublished, setResultsPublished] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"workspace" | "leaderboard">("workspace");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,8 +37,10 @@ export default function HomePage() {
         const data = await res.json();
         if (data?.contest) {
           setContestStatus(data.contest.status);
-          setCurrentRound(data.contest.currentRound || 1);
+          setCurrentRound(data.contest.currentRound ?? 0);
+          setRound1Unlocked(Boolean(data.contest.round1Unlocked));
           setRound2Unlocked(Boolean(data.contest.round2Unlocked));
+          setResultsPublished(Boolean(data.contest.resultsPublished));
         }
       } catch (err) {
         console.error("Failed to query contest status:", err);
@@ -73,15 +77,14 @@ export default function HomePage() {
 
   const handleSubmissionComplete = (sub: Submission) => {
     if (participant) {
+      const isDemo = sub.problemId === "p1-demo-array";
+      const isP1 = sub.problemId === "p2-stack-lodge";
+      const isP2 = sub.problemId === "p3-linkedlist-gang";
+
       const updated: Participant = {
         ...participant,
-        currentProblemIndex:
-          sub.problemId === "p1-linked-list"
-            ? 1
-            : sub.problemId === "p2-queues"
-            ? 2
-            : participant.currentProblemIndex,
-        completed: sub.problemId === "p2-queues",
+        currentProblemIndex: isDemo ? 1 : isP1 ? 2 : isP2 ? 3 : participant.currentProblemIndex,
+        completed: isP2,
         totalScore: participant.totalScore + (sub.evaluation?.score || 0),
       };
       setParticipant(updated);
@@ -92,7 +95,9 @@ export default function HomePage() {
   };
 
   const handleAllCompleted = () => {
-    setActiveTab("leaderboard");
+    if (resultsPublished) {
+      setActiveTab("leaderboard");
+    }
   };
 
   return (
@@ -101,6 +106,7 @@ export default function HomePage() {
         status={contestStatus}
         participant={participant}
         activeTab={activeTab}
+        resultsPublished={resultsPublished}
         onTabChange={setActiveTab}
         onLogout={handleLogout}
       />
@@ -128,7 +134,7 @@ export default function HomePage() {
             </div>
           </div>
         ) : activeTab === "leaderboard" ? (
-          <LeaderboardView currentParticipant={participant} />
+          <LeaderboardView currentParticipant={participant} resultsPublished={resultsPublished} />
         ) : !participant || contestStatus === "WAITING" ? (
           /* Clean Lobby view */
           <LobbyView
@@ -140,7 +146,10 @@ export default function HomePage() {
         ) : (
           <ProblemWorkspace
             participant={participant}
+            currentRound={currentRound}
+            round1Unlocked={round1Unlocked}
             round2Unlocked={round2Unlocked}
+            resultsPublished={resultsPublished}
             onAllCompleted={handleAllCompleted}
             onSubmissionComplete={handleSubmissionComplete}
             onViewLeaderboard={() => setActiveTab("leaderboard")}

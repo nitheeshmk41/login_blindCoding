@@ -10,10 +10,11 @@ export interface Problem {
   id: string;
   order: number;
   title: string;
-  topic: "Linked Lists" | "Queues";
-  difficulty: "Medium";
-  baseScore: number; // 100
-  timeLimitMinutes: number;
+  topic: string;
+  difficulty: "Easy" | "Medium";
+  isDemo?: boolean;
+  baseScore: number; // 0 for demo, 100 for Q2 & Q3
+  timeLimitMinutes: number; // 5 for Q1, 25 for Q2, 30 for Q3
   description: string;
   inputFormat: string;
   outputFormat: string;
@@ -86,13 +87,22 @@ export interface ContestState {
   code: string;
   name: string;
   status: ContestStatus;
-  currentRound: 1 | 2;
-  round2Unlocked: boolean;
+  currentRound: 0 | 1 | 2; // 0 = Q1 Demo (5m), 1 = Q2 Stack (25m), 2 = Q3 Linked List (30m)
+  round1Unlocked: boolean; // Starts Q2 (Stack)
+  round2Unlocked: boolean; // Starts Q3 (Linked List)
+  resultsPublished: boolean; // Unlocks leaderboard for candidates
   backgroundMusicEnabled?: boolean;
+  backgroundMusicVolume?: number; // Volume scale 0.0 to 1.0 (default 0.25 = 25%)
+  currentTrackIndex?: number; // 0, 1, or 2
+  demoStartedAt?: string;
   round1StartedAt?: string;
   round2StartedAt?: string;
-  round1DurationMinutes: number; // 10 minutes
-  round2DurationMinutes: number; // 35 minutes
+  demoDurationMinutes: number; // 5 mins
+  round1DurationMinutes: number; // 25 mins
+  round2DurationMinutes: number; // 30 mins
+  demoBufferMinutes: number; // 2 mins waiting timer after demo
+  round1BufferMinutes: number; // 10 mins waiting timer after Q2
+  round2BufferMinutes: number; // 10 mins evaluation window after Q3
   startedAt?: string;
   durationMinutes: number;
   participants: Participant[];

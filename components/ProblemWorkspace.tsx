@@ -26,7 +26,10 @@ import {
 
 interface ProblemWorkspaceProps {
   participant: Participant;
+  currentRound?: 0 | 1 | 2;
+  round1Unlocked?: boolean;
   round2Unlocked?: boolean;
+  resultsPublished?: boolean;
   onAllCompleted: () => void;
   onSubmissionComplete: (sub: Submission) => void;
   onViewLeaderboard?: () => void;
@@ -34,21 +37,16 @@ interface ProblemWorkspaceProps {
 
 export default function ProblemWorkspace({
   participant,
+  currentRound = 0,
+  round1Unlocked = false,
   round2Unlocked = false,
+  resultsPublished = false,
   onAllCompleted,
   onSubmissionComplete,
   onViewLeaderboard,
 }: ProblemWorkspaceProps) {
-  // Current problem index (0 for Problem 1, 1 for Problem 2)
-  const [currentProblemIdx, setCurrentProblemIdx] = useState<number>(
-    participant.currentProblemIndex >= 2 ? 1 : participant.currentProblemIndex
-  );
-
-  // If candidate finished Problem 1, but Round 2 has not been unlocked by Admin yet, hold in waiting room
-  const [waitingForRound2, setWaitingForRound2] = useState<boolean>(
-    participant.currentProblemIndex === 1 && !round2Unlocked
-  );
-
+  // Current active problem index (0 for Q1 Demo, 1 for Q2 Stack, 2 for Q3 LinkedList)
+  const currentProblemIdx = currentRound === 0 ? 0 : currentRound === 1 ? 1 : 2;
   const problem: Problem = CONTEST_PROBLEMS[currentProblemIdx] || CONTEST_PROBLEMS[0];
 
   // Selected language
@@ -57,17 +55,32 @@ export default function ProblemWorkspace({
   // Hints disclosure state
   const [showHints, setShowHints] = useState<boolean>(false);
 
-  // Code state: completely blank IDE (no default code)
+  // Code state: blank IDE
   const [code, setCode] = useState<string>("");
 
-  // Timers: Round 1 (Linked Lists) = 10 mins, Round 2 (Queues) = 35 mins
+  // Working timer per round
   const [secondsRemaining, setSecondsRemaining] = useState<number>(
-    currentProblemIdx === 0 ? 10 * 60 : 35 * 60
+    currentProblemIdx === 0 ? 5 * 60 : currentProblemIdx === 1 ? 25 * 60 : 30 * 60
   );
 
-  // 5-minute evaluation buffer for Question 2 (evaluated in 5mins after 35mins)
-  const [waitingForQ2EvaluationBuffer, setWaitingForQ2EvaluationBuffer] = useState<boolean>(false);
-  const [q2BufferSeconds, setQ2BufferSeconds] = useState<number>(5 * 60);
+  // Waiting buffers:
+  // After Q1 Demo: 2-minute timer waiting for Admin to start Round 1
+  const [waitingForRound1, setWaitingForRound1] = useState<boolean>(
+    participant.currentProblemIndex === 1 && !round1Unlocked
+  );
+  const [q1BufferSeconds, setQ1BufferSeconds] = useState<number>(2 * 60);
+
+  // After Q2 (P1): 10-minute timer waiting for Admin to start Round 2
+  const [waitingForRound2, setWaitingForRound2] = useState<boolean>(
+    participant.currentProblemIndex === 2 && !round2Unlocked
+  );
+  const [q2BufferSeconds, setQ2BufferSeconds] = useState<number>(10 * 60);
+
+  // After Q3 (P2): 10-minute evaluation buffer
+  const [waitingForFinalResults, setWaitingForFinalResults] = useState<boolean>(
+    participant.currentProblemIndex === 3 || participant.completed
+  );
+  const [q3BufferSeconds, setQ3BufferSeconds] = useState<number>(10 * 60);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -82,34 +95,43 @@ export default function ProblemWorkspace({
   const [tabSwitchPenalty, setTabSwitchPenalty] = useState<number>(0);
   const [showProctorWarning, setShowProctorWarning] = useState<boolean>(false);
   const [backspaceAlert, setBackspaceAlert] = useState<boolean>(false);
-  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState<boolean>(false);
+  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState<boolean>(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // When round2Unlocked turns true from admin, automatically transition to Problem 2
-  useEffect(() => {
-    if (round2Unlocked && waitingForRound2) {
-      setWaitingForRound2(false);
-      setCurrentProblemIdx(1);
-      setSecondsRemaining(35 * 60);
-      setCode("");
-      setHasEnteredFullscreen(false); // Force fullscreen click again for Q2
-    }
-  }, [round2Unlocked, waitingForRound2]);
 
   // Request fullscreen utility
   const requestFullscreenArena = () => {
     try {
-      if (!document.fullscreenElement) {
+      if (typeof document !== "undefined" && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
     } catch (e) {}
   };
 
-  // Attempt to enter fullscreen on initial mount (browsers may block this without gesture)
+  // Sync working timer when active round changes & trigger auto-fullscreen
   useEffect(() => {
-    // requestFullscreenArena();
-  }, []);
+    const limit = problem.timeLimitMinutes || (currentProblemIdx === 0 ? 5 : currentProblemIdx === 1 ? 25 : 30);
+    setSecondsRemaining(limit * 60);
+    setCode("");
+    requestFullscreenArena();
+    setHasEnteredFullscreen(true);
+  }, [currentRound, currentProblemIdx, problem.timeLimitMinutes]);
+
+  // Transition when Admin starts Round 1 (Q2 Stack)
+  useEffect(() => {
+    if (round1Unlocked || currentRound >= 1) {
+      setWaitingForRound1(false);
+      setHasEnteredFullscreen(true);
+    }
+  }, [round1Unlocked, currentRound]);
+
+  // Transition when Admin starts Round 2 (Q3 Linked List)
+  useEffect(() => {
+    if (round2Unlocked || currentRound >= 2) {
+      setWaitingForRound2(false);
+      setHasEnteredFullscreen(true);
+    }
+  }, [round2Unlocked, currentRound]);
 
   // Anti-cheat tab switch & fullscreen detection
   useEffect(() => {
@@ -133,9 +155,7 @@ export default function ProblemWorkspace({
     };
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        handleTabViolation();
-      }
+      if (document.visibilityState === "hidden") handleTabViolation();
     };
 
     const onWindowBlur = () => {
@@ -143,9 +163,7 @@ export default function ProblemWorkspace({
     };
 
     const onFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        handleTabViolation();
-      }
+      if (!document.fullscreenElement) handleTabViolation();
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -159,9 +177,26 @@ export default function ProblemWorkspace({
     };
   }, []);
 
-  // Countdown timer for problems
+  // Auto-request fullscreen on first click/interaction if not currently fullscreen
   useEffect(() => {
-    if (waitingForRound2 || waitingForQ2EvaluationBuffer || !hasEnteredFullscreen) return;
+    const handleGestureFullscreen = () => {
+      if (typeof document !== "undefined" && !document.fullscreenElement) {
+        requestFullscreenArena();
+      }
+    };
+
+    window.addEventListener("click", handleGestureFullscreen);
+    window.addEventListener("keydown", handleGestureFullscreen);
+
+    return () => {
+      window.removeEventListener("click", handleGestureFullscreen);
+      window.removeEventListener("keydown", handleGestureFullscreen);
+    };
+  }, []);
+
+  // Main Problem Working Timer
+  useEffect(() => {
+    if (waitingForRound1 || waitingForRound2 || waitingForFinalResults || !hasEnteredFullscreen) return;
     const timer = setInterval(() => {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
@@ -172,30 +207,47 @@ export default function ProblemWorkspace({
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [waitingForRound2, waitingForQ2EvaluationBuffer, currentProblemIdx, hasEnteredFullscreen]);
+  }, [waitingForRound1, waitingForRound2, waitingForFinalResults, currentProblemIdx, hasEnteredFullscreen]);
 
-  // 5-minute evaluation buffer countdown for Question 2
+  // 2-minute buffer timer countdown after Q1 Demo
   useEffect(() => {
-    if (!waitingForQ2EvaluationBuffer) return;
-    const bufferTimer = setInterval(() => {
-      setQ2BufferSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(bufferTimer);
-          onAllCompleted();
-          return 0;
-        }
-        return prev - 1;
-      });
+    if (!waitingForRound1) return;
+    const timer = setInterval(() => {
+      setQ1BufferSeconds((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-    return () => clearInterval(bufferTimer);
-  }, [waitingForQ2EvaluationBuffer, onAllCompleted]);
+    return () => clearInterval(timer);
+  }, [waitingForRound1]);
 
-  // Auto-submit when time expires (10 mins for Q1, 35 mins for Q2)
+  // 10-minute buffer timer countdown after Q2 (P1)
   useEffect(() => {
-    if (secondsRemaining === 0 && !isSubmitting && !waitingForRound2 && !waitingForQ2EvaluationBuffer) {
+    if (!waitingForRound2) return;
+    const timer = setInterval(() => {
+      setQ2BufferSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [waitingForRound2]);
+
+  // 10-minute post-contest evaluation buffer timer after Q3 (P2)
+  useEffect(() => {
+    if (!waitingForFinalResults) return;
+    const timer = setInterval(() => {
+      setQ3BufferSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [waitingForFinalResults]);
+
+  // Auto-submit when working timer expires
+  useEffect(() => {
+    if (
+      secondsRemaining === 0 &&
+      !isSubmitting &&
+      !waitingForRound1 &&
+      !waitingForRound2 &&
+      !waitingForFinalResults
+    ) {
       handleSubmit(true);
     }
-  }, [secondsRemaining, isSubmitting, waitingForRound2, waitingForQ2EvaluationBuffer]);
+  }, [secondsRemaining, isSubmitting, waitingForRound1, waitingForRound2, waitingForFinalResults]);
 
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -209,11 +261,8 @@ export default function ProblemWorkspace({
     }
   };
 
-  // Key down interceptor:
-  // Disallow text selection keys (Ctrl+A, Cmd+A, Shift + Arrows) in ALL problems
-  // Disallow Backspace & Delete keys in Round 2
+  // Key interceptor for anti-cheat
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Play keypress sound effect on typing character
     if (e.key.length === 1 || e.key === "Enter" || e.key === "Tab") {
       playKeypressSound();
     }
@@ -233,7 +282,8 @@ export default function ProblemWorkspace({
       return;
     }
 
-    if (currentProblemIdx === 1) {
+    // Round 2 (Q3 Linked List) blackout rules
+    if (currentProblemIdx === 2) {
       if (
         e.key === "Backspace" ||
         e.key === "Delete" ||
@@ -249,7 +299,7 @@ export default function ProblemWorkspace({
     }
   };
 
-  // Submission handler with auto-submit support
+  // Submission handler
   const handleSubmit = async (isAutoSubmit = false) => {
     const codeToSubmit = code.trim() ? code : "// [Time Expired - Code Automatically Submitted]";
     if (!code.trim() && !isAutoSubmit) {
@@ -276,20 +326,24 @@ export default function ProblemWorkspace({
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Submission failed");
-      }
+      if (!res.ok) throw new Error(data.error || "Submission failed");
 
       setSubmissionFeedback(data.submission);
       onSubmissionComplete(data.submission);
 
-      if (isAutoSubmit) {
-        if (currentProblemIdx === 0) {
+      if (currentProblemIdx === 0) {
+        if (!round1Unlocked && currentRound < 1) {
+          setWaitingForRound1(true);
+        }
+      } else if (currentProblemIdx === 1) {
+        if (!round2Unlocked && currentRound < 2) {
           setWaitingForRound2(true);
-        } else {
-          setWaitingForQ2EvaluationBuffer(true);
         }
       } else {
+        setWaitingForFinalResults(true);
+      }
+
+      if (!isAutoSubmit) {
         setShowAdvanceModal(true);
       }
     } catch (err: unknown) {
@@ -305,96 +359,53 @@ export default function ProblemWorkspace({
     setShowAdvanceModal(false);
     setCode("");
     if (currentProblemIdx === 0) {
-      setWaitingForRound2(true);
+      if (!round1Unlocked && currentRound < 1) {
+        setWaitingForRound1(true);
+      }
+    } else if (currentProblemIdx === 1) {
+      if (!round2Unlocked && currentRound < 2) {
+        setWaitingForRound2(true);
+      }
     } else {
-      setWaitingForQ2EvaluationBuffer(true);
+      setWaitingForFinalResults(true);
     }
   };
 
-  // Removed waitingForQ2EvaluationBuffer block from here as it was moved above
-
-  // If candidate finished Problem 2 and is in the 5-minute evaluation buffer
-  if (waitingForQ2EvaluationBuffer) {
-    const bufferMinutes = Math.floor(q2BufferSeconds / 60);
-    const bufferSecs = q2BufferSeconds % 60;
-    const formattedBuffer = `${bufferMinutes.toString().padStart(2, "0")}:${bufferSecs.toString().padStart(2, "0")}`;
-    const progressPercent = Math.max(0, Math.min(100, ((300 - q2BufferSeconds) / 300) * 100));
-
+  // -------------------------------------------------------------
+  // WAITING SCREEN 1: After Q1 Demo (2-minute timer)
+  // -------------------------------------------------------------
+  if (waitingForRound1 && !round1Unlocked && currentRound < 1) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-6 sm:p-8 w-full shadow-lg">
-          <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
-            <Clock className="w-5 h-5 text-amber-500" />
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center animate-fade-in">
+        <div className="rounded-lg border border-red-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center mx-auto mb-4 text-emerald-400 font-mono text-xl font-bold">
+            ✓
           </div>
 
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-[11px] font-mono text-zinc-300 mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Round 2 Concluded · 5-Min Evaluation Buffer
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-900/80 bg-red-950/40 text-xs font-mono text-red-300 mb-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Q1 Demo Complete · 2-Min Buffer Active
           </div>
 
           <h2 className="text-xl font-semibold text-zinc-100 mb-2">
-            Assessment Complete
+            Demo Round Submitted
           </h2>
 
-          {/* Buffer Timer Display */}
-          <div className="my-5 p-4 rounded-md bg-zinc-900/80 border border-zinc-800 max-w-xs mx-auto">
-            <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
-              Final Evaluation Buffer
-            </div>
-            <div className="text-3xl font-semibold font-mono text-zinc-100 tracking-wider">
-              {formattedBuffer}
-            </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1 mt-3 overflow-hidden">
-              <div
-                className="bg-red-600 h-1 rounded-full transition-all duration-1000"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">
-            The 35-minute coding period for Question 2 has concluded. Submissions are being evaluated by the static AI auditor. Marks are automatically updated on the official leaderboard.
+          <p className="text-xs text-zinc-400 mb-5 max-w-md mx-auto leading-relaxed">
+            Your Q1 Demo submission has been collected (no marks evaluated). All candidates are held in lobby standby until the administrator initiates Round 1 (Problem 1 · Stack · 25 Mins).
           </p>
 
-          <div className="inline-block px-3 py-1 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400 mb-6">
-            Official Standings: <strong className="text-zinc-200">Only Top 2</strong> are highlighted on the podium.
+          {/* 2-minute timer display */}
+          <div className="my-5 p-4 rounded-md bg-zinc-900/80 border border-zinc-800 max-w-xs mx-auto">
+            <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
+              Round 1 Transition Timer
+            </div>
+            <div className="text-3xl font-bold font-mono text-emerald-400 tracking-wider">
+              {formatTime(q1BufferSeconds)}
+            </div>
           </div>
 
-          {/* Latest Submission Card */}
-          {submissionFeedback && (
-            <div className="bg-zinc-900/70 border border-zinc-800 rounded-md p-4 mb-6 max-w-md mx-auto text-left font-mono text-xs space-y-2">
-              <div className="flex justify-between items-center text-zinc-400">
-                <span>{submissionFeedback.problemTitle || "Problem 2"}:</span>
-                <span className="text-base font-semibold text-zinc-100">
-                  {submissionFeedback.evaluation ? `${submissionFeedback.evaluation.score} / 100 PTS` : "Pending Admin Evaluation"}
-                </span>
-              </div>
-              {submissionFeedback.evaluation && (
-                <>
-                  <div className="flex justify-between items-center text-[11px] text-zinc-500 pt-2 border-t border-zinc-800">
-                    <span>Deductions:</span>
-                    <span className="text-red-400 font-mono">-{submissionFeedback.evaluation.totalDeduction} pts</span>
-                  </div>
-                  {(submissionFeedback.evaluation.syntaxErrors.length > 0 || submissionFeedback.evaluation.logicErrors.length > 0) && (
-                    <div className="mt-2 text-[10px] text-red-300">
-                      See Final Standings for detailed feedback.
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {onViewLeaderboard && (
-              <button
-                onClick={onViewLeaderboard}
-                className="btn-primary-red w-full sm:w-auto px-5 py-2.5 rounded-md text-xs font-medium flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-              >
-                <Trophy className="w-4 h-4" />
-                <span>View Live Standings</span>
-              </button>
-            )}
             <button
               onClick={requestFullscreenArena}
               className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
@@ -403,143 +414,143 @@ export default function ProblemWorkspace({
               <span>Verify Fullscreen</span>
             </button>
           </div>
+
+          <div className="mt-6 pt-4 border-t border-zinc-900 flex items-center justify-center gap-2 text-[11px] font-mono text-zinc-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Waiting for administrator to initiate Round 1 (Problem 1 · Stack · 25 Mins)...</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  // If candidate has completed both questions, lock the workspace completely
-  if (participant.completed) {
+  // -------------------------------------------------------------
+  // WAITING SCREEN 2: After Q2 Problem 1 (10-minute timer)
+  // -------------------------------------------------------------
+  if (waitingForRound2 && !round2Unlocked && currentRound < 2) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center animate-fade-in">
-        <div className="rounded-lg border border-emerald-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
-          <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-600/50 flex items-center justify-center mx-auto mb-4 text-emerald-400">
-            <CheckCircle2 className="w-6 h-6" />
+        <div className="rounded-lg border border-red-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center mx-auto mb-4 text-emerald-400 font-mono text-xl font-bold">
+            ✓
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-900/80 bg-emerald-950/40 text-xs font-mono text-emerald-400 mb-4">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Assessment Concluded · Submissions Locked
-          </div>
-
-          <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">
-            All Questions Submitted!
-          </h2>
-
-          <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">
-            You have completed both Problem 1 and Problem 2. Your solutions have been submitted and locked. You can no longer edit or re-enter the coding environment.
-          </p>
-
-          <div className="bg-zinc-900/70 border border-zinc-800 rounded-md p-4 mb-6 max-w-md mx-auto text-left font-mono text-xs space-y-3">
-            <div className="flex justify-between items-center text-zinc-300 pb-2 border-b border-zinc-800">
-              <span className="font-semibold text-zinc-200">Candidate:</span>
-              <span className="text-emerald-400 font-bold">{participant.name}</span>
-            </div>
-            <div className="flex justify-between items-center text-zinc-400">
-              <span>Status:</span>
-              <span className="text-emerald-400 font-semibold">Both Problems Submitted &amp; Locked</span>
-            </div>
-            <div className="flex justify-between items-center text-zinc-400">
-              <span>Total Score:</span>
-              <span className="text-zinc-100 font-bold text-sm">{participant.totalScore} PTS</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {onViewLeaderboard && (
-              <button
-                onClick={onViewLeaderboard}
-                className="btn-primary-red w-full sm:w-auto px-5 py-2.5 rounded-md text-xs font-medium flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-              >
-                <Trophy className="w-4 h-4" />
-                <span>View Official Leaderboard &amp; Standings</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If candidate completed Problem 1 and is waiting for Admin to start Round 2
-  if (waitingForRound2) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-6 sm:p-8 w-full shadow-lg">
-          <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </div>
-
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-[11px] font-mono text-zinc-300 mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Round 1 Complete · Waiting for Round 2
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-900/80 bg-red-950/40 text-xs font-mono text-red-300 mb-3">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            Problem 1 Submitted · 10-Min Buffer Active
           </div>
 
           <h2 className="text-xl font-semibold text-zinc-100 mb-2">
-            Problem 1 Submitted
+            Problem 1 Collected
           </h2>
 
-          <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto leading-relaxed">
-            Your Round 1 solution has been collected. All candidates are held in lobby standby until the administrator begins Round 2 (Question 2 · 35 Mins). Evaluation is pending.
+          <p className="text-xs text-zinc-400 mb-5 max-w-md mx-auto leading-relaxed">
+            Your Problem 1 solution (The Lodge Escape · Stack) has been collected. All candidates are held in lobby standby until the administrator initiates Round 2 (Problem 2 · Linked List Medium · 30 Mins).
           </p>
 
-          {/* Result Summary */}
-          {submissionFeedback && (
-            <div className="bg-zinc-900/70 border border-zinc-800 rounded-md p-4 mb-6 max-w-md mx-auto text-left font-mono text-xs space-y-2">
-              <div className="flex justify-between items-center text-zinc-400">
-                <span>Problem 1 (Linked Lists):</span>
-                <span className="text-base font-semibold text-zinc-100">
-                  {submissionFeedback.evaluation ? `${submissionFeedback.evaluation.score} / 100 PTS` : "Pending Admin Evaluation"}
-                </span>
-              </div>
-              {submissionFeedback.evaluation && (
-                <>
-                  <div className="flex justify-between items-center text-[11px] text-zinc-500 pt-2 border-t border-zinc-800">
-                    <span>Deductions:</span>
-                    <span>-{submissionFeedback.evaluation.totalDeduction} PTS</span>
-                  </div>
-                  {submissionFeedback.evaluation.aiFeedback && (
-                    <p className="text-[11px] text-zinc-400 italic pt-1">
-                      &ldquo;{submissionFeedback.evaluation.aiFeedback}&rdquo;
-                    </p>
-                  )}
-                </>
-              )}
+          {/* 10-minute buffer timer display */}
+          <div className="my-5 p-4 rounded-md bg-zinc-900/80 border border-zinc-800 max-w-xs mx-auto">
+            <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
+              Round 2 Transition Timer
             </div>
-          )}
+            <div className="text-3xl font-bold font-mono text-amber-400 tracking-wider">
+              {formatTime(q2BufferSeconds)}
+            </div>
+          </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {onViewLeaderboard && (
-              <button
-                onClick={onViewLeaderboard}
-                className="btn-primary-red w-full sm:w-auto px-4 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                <span>View Live Standings</span>
-              </button>
-            )}
-
             <button
               onClick={requestFullscreenArena}
-              className="w-full sm:w-auto px-4 py-2 rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Maximize2 className="w-3.5 h-3.5" />
+              <Maximize2 className="w-4 h-4" />
               <span>Verify Fullscreen</span>
             </button>
           </div>
 
           <div className="mt-6 pt-4 border-t border-zinc-900 flex items-center justify-center gap-2 text-[11px] font-mono text-zinc-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Auto-transitioning when administrator initiates Round 2...</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span>Waiting for administrator to initiate Round 2 (Problem 2 · Linked List · 30 Mins)...</span>
           </div>
         </div>
       </div>
     );
   }
 
+  // -------------------------------------------------------------
+  // WAITING SCREEN 3: After Q3 Problem 2 (10-minute evaluation buffer & Leaderboard Lock)
+  // -------------------------------------------------------------
+  if (waitingForFinalResults) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center animate-fade-in">
+        <div className="rounded-lg border border-red-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center mx-auto mb-4 text-emerald-400 font-mono text-xl font-bold">
+            🔒
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-900/80 bg-red-950/40 text-xs font-mono text-red-300 mb-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Assessment Concluded · 10-Min Evaluation Window
+          </div>
+
+          <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">
+            Assessment Completed!
+          </h2>
+
+          <p className="text-xs text-zinc-400 mb-5 max-w-md mx-auto leading-relaxed">
+            You have completed all 3 stages of the DC Movie Blind Coding Assessment. Solutions have been locked and submitted for static reverse evaluation.
+          </p>
+
+          {/* 10-minute evaluation timer display */}
+          <div className="my-5 p-4 rounded-md bg-zinc-900/80 border border-zinc-800 max-w-xs mx-auto">
+            <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
+              Final Evaluation Buffer
+            </div>
+            <div className="text-3xl font-bold font-mono text-red-400 tracking-wider">
+              {formatTime(q3BufferSeconds)}
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/70 border border-zinc-800 rounded-md p-4 mb-6 max-w-md mx-auto text-left font-mono text-xs space-y-2">
+            <div className="flex justify-between items-center text-zinc-300">
+              <span>Candidate:</span>
+              <span className="text-emerald-400 font-bold">{participant.name}</span>
+            </div>
+            <div className="flex justify-between items-center text-zinc-400">
+              <span>Leaderboard Status:</span>
+              <span className="text-amber-400 font-semibold">
+                {resultsPublished ? "Published" : "Pending Admin Publication 🔒"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            {resultsPublished ? (
+              onViewLeaderboard && (
+                <button
+                  onClick={onViewLeaderboard}
+                  className="btn-primary-red w-full sm:w-auto px-5 py-2.5 rounded-md text-xs font-medium flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>View Published Standings</span>
+                </button>
+              )
+            ) : (
+              <div className="p-3 rounded bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <span>Leaderboard will be visible once the admin publishes the results.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
   // Initial Fullscreen Gate
-  if (!hasEnteredFullscreen && !participant.completed && !waitingForQ2EvaluationBuffer && !waitingForRound2) {
+  // -------------------------------------------------------------
+  if (!hasEnteredFullscreen && !participant.completed && !waitingForRound1 && !waitingForRound2 && !waitingForFinalResults) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-2xl mx-auto w-full text-center">
         <div className="rounded-lg border border-red-900/60 bg-zinc-950 p-6 sm:p-8 w-full shadow-2xl">
@@ -550,7 +561,13 @@ export default function ProblemWorkspace({
             Fullscreen Required
           </h2>
           <p className="text-xs text-zinc-400 mb-6 max-w-md mx-auto">
-            This assessment requires strict full-screen proctoring. Please click the button below to enter fullscreen mode and begin {currentProblemIdx === 0 ? "Round 1 (10 Mins)" : "Round 2 (35 Mins)"}. Your timer will not start until you do so.
+            This assessment requires strict full-screen proctoring. Please click below to enter fullscreen mode and begin{" "}
+            {currentProblemIdx === 0
+              ? "Q1 Demo (5 Mins)"
+              : currentProblemIdx === 1
+              ? "Round 1: Problem 1 (Stack · 25 Mins)"
+              : "Round 2: Problem 2 (Linked List · 30 Mins)"}
+            .
           </p>
           <button
             onClick={() => {
@@ -560,14 +577,12 @@ export default function ProblemWorkspace({
             className="btn-primary-red px-6 py-2.5 rounded-md text-sm font-semibold flex items-center justify-center mx-auto gap-2 cursor-pointer"
           >
             <Maximize2 className="w-4 h-4" />
-            Enter Fullscreen & Begin
+            Enter Fullscreen &amp; Begin
           </button>
         </div>
       </div>
     );
   }
-
-
 
   const lineCount = code ? code.split("\n").length : 0;
   const charCount = code.length;
@@ -576,25 +591,34 @@ export default function ProblemWorkspace({
     <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-7xl mx-auto w-full">
       {/* Top Workspace Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-3 mb-4 border-b border-zinc-800">
-        {/* Round indicator */}
-        <div className="flex items-center gap-1 bg-zinc-900/80 p-0.5 rounded-md border border-zinc-800">
+        {/* Stage Indicator Pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span
-            className={`px-3 py-1 text-xs font-mono font-medium rounded transition-colors ${
+            className={`px-3 py-1 text-xs font-mono font-medium rounded border transition-colors ${
               currentProblemIdx === 0
-                ? "bg-zinc-800 text-zinc-100 shadow-xs"
-                : "text-zinc-500"
+                ? "bg-red-950 text-red-300 border-red-800 font-bold"
+                : "bg-zinc-900 text-zinc-500 border-zinc-800"
             }`}
           >
-            01 · Linked Lists (10m)
+            Demo Round (5m)
           </span>
           <span
-            className={`px-3 py-1 text-xs font-mono font-medium rounded transition-colors ${
+            className={`px-3 py-1 text-xs font-mono font-medium rounded border transition-colors ${
               currentProblemIdx === 1
-                ? "bg-zinc-800 text-zinc-100 shadow-xs"
-                : "text-zinc-500"
+                ? "bg-red-950 text-red-300 border-red-800 font-bold"
+                : "bg-zinc-900 text-zinc-500 border-zinc-800"
             }`}
           >
-            02 · Queues (35m)
+            Round 1 (25m)
+          </span>
+          <span
+            className={`px-3 py-1 text-xs font-mono font-medium rounded border transition-colors ${
+              currentProblemIdx === 2
+                ? "bg-red-950 text-red-300 border-red-800 font-bold"
+                : "bg-zinc-900 text-zinc-500 border-zinc-800"
+            }`}
+          >
+            Round 2 (30m)
           </span>
         </div>
 
@@ -618,12 +642,13 @@ export default function ProblemWorkspace({
             </div>
           )}
 
-          <div className="flex items-center gap-2 px-3 py-1 rounded bg-zinc-900 border border-zinc-800 font-mono text-xs text-zinc-300">
-            <Timer className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-zinc-500 text-[10px] uppercase">Time:</span>
+          {/* Enhanced Timer Display */}
+          <div className="flex items-center gap-2 px-3 py-1 rounded bg-zinc-900 border border-red-900/60 font-mono text-xs text-zinc-300 shadow-sm">
+            <Timer className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+            <span className="text-zinc-400 text-[10px] uppercase font-bold">Timer:</span>
             <span
-              className={`font-semibold tracking-wider ${
-                secondsRemaining < 300 ? "text-red-400 animate-pulse" : "text-zinc-100"
+              className={`font-mono font-bold tracking-wider text-sm ${
+                secondsRemaining < 180 ? "text-red-400 animate-pulse" : "text-emerald-400"
               }`}
             >
               {formatTime(secondsRemaining)}
@@ -645,13 +670,38 @@ export default function ProblemWorkspace({
         {/* Left: Problem Description Panel */}
         <div className="lg:col-span-5 rounded-lg border border-zinc-800 bg-zinc-950 p-5 flex flex-col justify-between overflow-y-auto max-h-[calc(100vh-12rem)] space-y-4">
           <div className="space-y-4">
+            {/* DC Movie 2026 Poster Banner */}
+            <div className="relative rounded-lg overflow-hidden border border-red-900/60 shadow-lg group">
+              <img
+                src="/dc_movie_full.jpg"
+                alt="DC Tamil 2026 Movie Poster"
+                className="w-full h-36 object-cover object-top filter brightness-90 group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-red-600 text-white font-mono text-[10px] font-bold tracking-wider uppercase">
+                    DC (2026) · DSA REVENGE
+                  </span>
+                  <div className="text-xs font-mono font-bold text-white mt-1 drop-shadow">
+                    Das • Chandra • Kitty • Karuppu
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-mono text-zinc-300 bg-black/70 px-2 py-0.5 rounded border border-zinc-700">
+                    Stage {currentProblemIdx + 1} of 3
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-red-400 font-semibold">
                   {problem.topic}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400 border border-zinc-800">
-                  {problem.difficulty} · 100 Base Pts
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-300 border border-zinc-800">
+                  {problem.difficulty} · {problem.baseScore} Base Pts
                 </span>
               </div>
               <h1 className="text-lg font-semibold text-zinc-100 tracking-tight mb-2">
@@ -660,12 +710,16 @@ export default function ProblemWorkspace({
 
               {/* Problem specific rule notification */}
               {currentProblemIdx === 0 ? (
-                <div className="p-2.5 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 mb-3">
-                  <span className="text-red-400 font-semibold">Rule:</span> Blurred mode active. Text selection and clipboard operations are strictly disabled.
+                <div className="p-2.5 rounded-md bg-amber-950/40 border border-amber-800 text-xs font-mono text-amber-300 mb-3">
+                  <span className="text-amber-400 font-semibold">Demo Question:</span> 5 Mins working time. NO marks and NO evaluation.
+                </div>
+              ) : currentProblemIdx === 1 ? (
+                <div className="p-2.5 rounded-md bg-zinc-900 border border-red-900/60 text-xs font-mono text-zinc-300 mb-3">
+                  <span className="text-red-400 font-semibold">Problem 1 Rule:</span> Blurred mode active. Text selection and clipboard operations disabled.
                 </div>
               ) : (
-                <div className="p-2.5 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 mb-3">
-                  <span className="text-red-400 font-semibold">Rule:</span> Pure blackout mode. Backspace, Delete, and text selection are strictly disabled.
+                <div className="p-2.5 rounded-md bg-zinc-900 border border-red-900/60 text-xs font-mono text-zinc-300 mb-3">
+                  <span className="text-red-400 font-semibold">Problem 2 Rule:</span> Pure blackout mode. Backspace, Delete, and selection strictly disabled.
                 </div>
               )}
 
@@ -733,7 +787,7 @@ export default function ProblemWorkspace({
               </ul>
             </div>
 
-            {/* Collapsible Hints & Solution Demo Code Section */}
+            {/* Collapsible Hints & Solution Guide */}
             {(problem.hints || problem.solutionGuide) && (
               <div className="pt-3 border-t border-zinc-900">
                 <button
@@ -745,7 +799,7 @@ export default function ProblemWorkspace({
                 >
                   <span className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-amber-400" />
-                    <span>Hints &amp; Solution Demo Guide</span>
+                    <span>Hints &amp; Algorithm Guide</span>
                   </span>
                   {showHints ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -768,7 +822,7 @@ export default function ProblemWorkspace({
                     {problem.solutionGuide && (
                       <div>
                         <span className="text-amber-400 font-bold block mb-1 uppercase tracking-wider text-[11px]">
-                          Algorithm Pseudocode &amp; Demo Guide:
+                          Algorithm Pseudocode:
                         </span>
                         <pre className="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 text-[11px] overflow-x-auto leading-relaxed whitespace-pre-wrap">
                           {problem.solutionGuide}
@@ -779,11 +833,6 @@ export default function ProblemWorkspace({
                 )}
               </div>
             )}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-zinc-900 text-[11px] font-mono text-zinc-500 flex justify-between">
-            <span>Static reverse evaluation</span>
-            <span>100 base score</span>
           </div>
         </div>
 
@@ -814,6 +863,11 @@ export default function ProblemWorkspace({
             {/* Status indicator and Clear */}
             <div className="flex items-center gap-2">
               {currentProblemIdx === 0 ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-mono text-amber-400 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Demo Mode
+                </span>
+              ) : currentProblemIdx === 1 ? (
                 <span className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                   Blurred Mode
@@ -838,14 +892,14 @@ export default function ProblemWorkspace({
             </div>
           </div>
 
-          {/* Backspace Alert Badge in Q2 */}
+          {/* Backspace Alert Badge in Q3 */}
           {backspaceAlert && (
             <div className="mb-2 py-1 px-3 rounded bg-red-950/50 border border-red-900/60 text-red-300 text-xs font-mono text-center">
-              Backspace &amp; Delete keys are disabled in Round 2.
+              Backspace &amp; Delete keys are disabled in Round 2 (Q3).
             </div>
           )}
 
-          {/* Text Editor Area - Text selection STRICTLY PREVENTED */}
+          {/* Text Editor Area */}
           <div className="flex-1 flex flex-col min-h-[380px] bg-black rounded-md border border-zinc-900 relative">
             <textarea
               ref={textareaRef}
@@ -856,7 +910,6 @@ export default function ProblemWorkspace({
               }}
               onKeyDown={handleKeyDown}
               onSelect={(e) => {
-                // Strictly disable text selection: force cursor to single position
                 const target = e.currentTarget;
                 if (target.selectionStart !== target.selectionEnd) {
                   target.selectionStart = target.selectionEnd;
@@ -879,15 +932,17 @@ export default function ProblemWorkspace({
               onContextMenu={(e) => e.preventDefault()}
               placeholder={
                 currentProblemIdx === 0
-                  ? "Type your solution from scratch (text is blurred, selection is disabled)..."
-                  : "Type your solution from scratch (pure blackout; backspace and selection disabled)..."
+                  ? "Type your Demo array solution (text is blurred, selection disabled)..."
+                  : currentProblemIdx === 1
+                  ? "Type your solution from scratch (text is blurred, selection disabled)..."
+                  : "Type your solution from scratch (blackout mode; backspace and selection disabled)..."
               }
               spellCheck={false}
               autoCapitalize="none"
               autoComplete="off"
               autoCorrect="off"
               className={`w-full flex-1 p-3.5 font-mono text-xs sm:text-sm leading-relaxed outline-none resize-none rounded-md border-none select-none ${
-                currentProblemIdx === 0
+                currentProblemIdx === 0 || currentProblemIdx === 1
                   ? "blind-mode-blur-noselect"
                   : "blind-mode-blackout-nobackspace"
               }`}
@@ -910,12 +965,14 @@ export default function ProblemWorkspace({
               {isSubmitting ? (
                 <>
                   <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  <span>Evaluating...</span>
+                  <span>Submitting...</span>
                 </>
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5" />
-                  <span>Submit {currentProblemIdx === 0 ? "Problem 1" : "Problem 2"}</span>
+                  <span>
+                    Submit {currentProblemIdx === 0 ? "Demo Q1" : currentProblemIdx === 1 ? "Problem 1" : "Problem 2"}
+                  </span>
                 </>
               )}
             </button>
@@ -923,7 +980,34 @@ export default function ProblemWorkspace({
         </div>
       </div>
 
-      {/* Proctoring Fullscreen / Tab Switch Warning Modal */}
+      {/* Auto Fullscreen Required Overlay for Demo & Contest Rounds */}
+      {typeof document !== "undefined" && !document.fullscreenElement && !showProctorWarning && (
+        <div
+          onClick={requestFullscreenArena}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md cursor-pointer"
+        >
+          <div className="max-w-md w-full rounded-lg border border-red-800 bg-zinc-950 p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-full bg-red-950/80 border border-red-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Maximize2 className="w-6 h-6 text-red-500" />
+            </div>
+            <span className="px-2.5 py-0.5 rounded bg-red-600 text-white font-mono text-[10px] font-bold uppercase tracking-wider">
+              {currentProblemIdx === 0 ? "DEMO ROUND FULLSCREEN PROTOCOL" : "FULLSCREEN PROCTORING ENFORCED"}
+            </span>
+            <h3 className="text-lg font-bold text-zinc-100 mt-2 mb-2">
+              Full Screen Mode Required
+            </h3>
+            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
+              Click anywhere on this screen to automatically enter full-screen mode and unlock the {currentProblemIdx === 0 ? "Demo Q1" : currentProblemIdx === 1 ? "Problem 1" : "Problem 2"} workspace.
+            </p>
+            <div className="btn-primary-red w-full py-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center gap-2">
+              <Maximize2 className="w-4 h-4" />
+              <span>CLICK ANYWHERE TO ENTER FULLSCREEN</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proctoring Warning Modal */}
       {showProctorWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90">
           <div className="max-w-md w-full rounded-lg border border-red-800 bg-zinc-950 p-6 shadow-xl text-center">
@@ -940,9 +1024,7 @@ export default function ProblemWorkspace({
                 <div className="p-2 rounded bg-zinc-900 border border-zinc-800 text-amber-400 font-mono font-medium">
                   Warning 1 of 2
                 </div>
-                <p>
-                  Window focus loss is monitored by proctoring. Return to fullscreen immediately.
-                </p>
+                <p>Focus loss is monitored by proctoring. Return to fullscreen immediately.</p>
               </div>
             )}
 
@@ -951,9 +1033,7 @@ export default function ProblemWorkspace({
                 <div className="p-2 rounded bg-red-950/60 border border-red-800 text-red-300 font-mono font-medium">
                   Final Warning (2 of 2)
                 </div>
-                <p>
-                  Any subsequent tab switch will incur a <strong>-10 penalty deduction</strong> per event.
-                </p>
+                <p>Any subsequent tab switch will incur a <strong>-10 penalty deduction</strong> per event.</p>
               </div>
             )}
 
@@ -963,7 +1043,7 @@ export default function ProblemWorkspace({
                   Penalty Applied: Attempt #{tabSwitchCount}
                 </div>
                 <p className="text-red-400 font-medium">
-                  -{(tabSwitchCount - 2) * 10} marks deducted from your final assessment score.
+                  -{(tabSwitchCount - 2) * 10} marks deducted from final score.
                 </p>
               </div>
             )}
@@ -993,82 +1073,32 @@ export default function ProblemWorkspace({
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-100">
-                    {currentProblemIdx === 0 ? "Problem 1 Evaluated" : "Assessment Complete"}
+                    {currentProblemIdx === 0
+                      ? "Q1 Demo Submitted"
+                      : currentProblemIdx === 1
+                      ? "Problem 1 Submitted"
+                      : "Assessment Concluded"}
                   </h3>
                   <p className="text-[11px] font-mono text-zinc-400">
                     Language: {submissionFeedback.language.toUpperCase()}
                   </p>
                 </div>
               </div>
-
-              <div className="text-right">
-                <div className="text-[10px] font-mono text-zinc-500 uppercase">Status</div>
-                <div className="text-sm font-semibold font-mono text-zinc-100 mt-1">
-                  {submissionFeedback.evaluation ? (
-                    <>
-                      {submissionFeedback.evaluation.score} <span className="text-xs text-zinc-500 font-normal">/ 100</span>
-                    </>
-                  ) : (
-                    "Pending Evaluation"
-                  )}
-                </div>
-              </div>
             </div>
 
-            {/* Error & Deductions Breakdown (Only if evaluated) */}
-            {submissionFeedback.evaluation ? (
-              <div className="space-y-2 mb-5 font-mono text-xs">
-                <div className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800/80 flex justify-between items-center">
-                  <span className="text-zinc-400">Base Score:</span>
-                  <span className="text-zinc-200 font-medium">100 PTS</span>
-                </div>
+            <div className="mb-5 p-4 rounded bg-zinc-900/40 border border-zinc-800 text-xs text-zinc-400 font-mono text-center">
+              {currentProblemIdx === 0
+                ? "Demo question completed! You will be placed in the 2-minute buffer room until the admin starts Round 1."
+                : currentProblemIdx === 1
+                ? "Problem 1 collected! You will be placed in the 10-minute buffer room until the admin starts Round 2."
+                : "Assessment completed! You will enter the 10-minute evaluation window. Leaderboard will be visible once published by the admin."}
+            </div>
 
-                <div className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800/80 space-y-1">
-                  <div className="flex justify-between items-center text-zinc-300 font-medium">
-                    <span>Defects Deducted:</span>
-                    <span className="text-red-400">
-                      -
-                      {(submissionFeedback.evaluation.totalDeduction ?? 0) -
-                        (submissionFeedback.evaluation.tabSwitchPenalty ?? 0)}{" "}
-                      PTS
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/60 space-y-0.5">
-                    <div>• Syntax Errors: {submissionFeedback.evaluation.syntaxErrors?.length ?? 0}</div>
-                    <div>• Logic Flaws: {submissionFeedback.evaluation.logicErrors?.length ?? 0}</div>
-                    <div>• Edge Cases: {submissionFeedback.evaluation.edgeCaseErrors?.length ?? 0}</div>
-                  </div>
-                </div>
-
-                {(submissionFeedback.evaluation.tabSwitchPenalty ?? 0) > 0 && (
-                  <div className="p-2.5 rounded bg-red-950/30 border border-red-900 text-red-300 flex justify-between items-center font-medium">
-                    <span>Proctoring Penalty:</span>
-                    <span>-{submissionFeedback.evaluation.tabSwitchPenalty} PTS</span>
-                  </div>
-                )}
-
-                {submissionFeedback.evaluation.aiFeedback && (
-                  <div className="p-2.5 rounded bg-zinc-900/40 border border-zinc-800 text-[11px] text-zinc-400 italic">
-                    &ldquo;{submissionFeedback.evaluation.aiFeedback}&rdquo;
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="mb-5 p-4 rounded bg-zinc-900/40 border border-zinc-800 text-xs text-zinc-400 font-mono text-center">
-                Your code has been collected successfully. It will be evaluated by the administrator.
-              </div>
-            )}
-
-            {/* Proceed Action */}
             <button
               onClick={handleProceedToNext}
               className="btn-primary-red w-full py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>
-                {currentProblemIdx === 0
-                  ? "Enter Round 2 Waiting Room (Wait for Admin to Start) →"
-                  : "View Official Leaderboard →"}
-              </span>
+              <span>Proceed →</span>
             </button>
           </div>
         </div>

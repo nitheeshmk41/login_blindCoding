@@ -20,6 +20,7 @@ interface NavbarProps {
   status?: ContestStatus;
   participant?: Participant | null;
   activeTab?: "workspace" | "leaderboard";
+  resultsPublished?: boolean;
   onTabChange?: (tab: "workspace" | "leaderboard") => void;
   onLogout?: () => void;
 }
@@ -28,6 +29,7 @@ export default function Navbar({
   status = "WAITING",
   participant,
   activeTab = "workspace",
+  resultsPublished = false,
   onTabChange,
   onLogout,
 }: NavbarProps) {
@@ -74,27 +76,29 @@ export default function Navbar({
       {/* Brand & Context */}
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2.5 text-zinc-100 hover:text-white transition-colors">
-          <div className="w-7 h-7 rounded bg-zinc-900 border border-zinc-700 flex items-center justify-center text-red-500 font-mono font-bold text-xs">
-            <Code2 className="w-3.5 h-3.5" />
-          </div>
+          <img
+            src="/bc_logo.png"
+            alt="Blind Coding Event Logo"
+            className="w-8 h-8 rounded-md object-contain border border-zinc-700 bg-zinc-950 p-0.5 shadow-sm"
+          />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5 leading-none">
-              <span className="font-semibold text-sm tracking-tight text-white">LOGIN 2K26</span>
-              <span className="text-[11px] font-mono text-zinc-500">· Blind Coding</span>
+              <span className="font-bold text-sm tracking-tight text-white">LOGIN 2K26</span>
+              <span className="text-[11px] font-mono text-red-400 font-semibold">· DC Movie DSA Arena</span>
             </div>
-            <span className="text-[10px] text-zinc-500 hidden md:block">PSG College of Technology</span>
+            <span className="text-[10px] text-zinc-400 hidden md:block">PSG College of Technology · MCA</span>
           </div>
         </Link>
 
         {/* Contest Status Pill */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900/60 text-[11px] font-mono">
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded border border-red-900/60 bg-zinc-900/80 text-[11px] font-mono">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              status === "ACTIVE" ? "bg-emerald-500" : "bg-amber-500"
+              status === "ACTIVE" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
             }`}
           />
-          <span className="text-zinc-400">
-            {status === "ACTIVE" ? "Contest Active" : "Lobby Standby"}
+          <span className="text-zinc-300 font-semibold">
+            {status === "ACTIVE" ? "DC Arena Active" : "Lobby Standby"}
           </span>
         </div>
       </div>
@@ -114,15 +118,24 @@ export default function Navbar({
             <span>Workspace</span>
           </button>
           <button
-            onClick={() => onTabChange("leaderboard")}
+            onClick={() => {
+              if (resultsPublished) {
+                onTabChange("leaderboard");
+              } else {
+                alert("Results Pending Publication: Leaderboard will be visible once the admin publishes the final standings.");
+              }
+            }}
+            title={resultsPublished ? "View Leaderboard" : "Leaderboard locked until Admin publishes results"}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded transition-colors ${
               activeTab === "leaderboard"
                 ? "bg-zinc-800 text-white shadow-xs"
-                : "text-zinc-400 hover:text-zinc-200"
+                : resultsPublished
+                ? "text-zinc-400 hover:text-zinc-200"
+                : "text-zinc-600 cursor-not-allowed opacity-60"
             }`}
           >
-            <Trophy className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Leaderboard</span>
+            <Trophy className={`w-3.5 h-3.5 ${resultsPublished ? "text-zinc-400" : "text-amber-600"}`} />
+            <span>Leaderboard {resultsPublished ? "" : "🔒"}</span>
           </button>
         </nav>
       )}

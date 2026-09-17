@@ -22,6 +22,7 @@ import {
   Volume2,
   VolumeX,
   Music,
+  Trophy,
 } from "lucide-react";
 import { Submission, ContestState, ErrorItem, AiProvider } from "@/lib/types";
 
@@ -97,9 +98,10 @@ export default function AdminPage() {
         }
       }
       if (evalData.submissions) {
-        setSubmissions(evalData.submissions);
+        const filtered = evalData.submissions.filter((s: Submission) => s.problemId !== "p1-demo-array");
+        setSubmissions(filtered);
         if (selectedSub) {
-          const updated = evalData.submissions.find((s: Submission) => s.id === selectedSub.id);
+          const updated = filtered.find((s: Submission) => s.id === selectedSub.id);
           if (updated) setSelectedSub(updated);
         }
       }
@@ -234,38 +236,37 @@ export default function AdminPage() {
     }
   };
 
-  const handleStartContest = async () => {
+  const handleStartDemo = async () => {
     try {
       const res = await fetch("/api/contest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start" }),
+        body: JSON.stringify({ action: "start_demo" }),
       });
       if (res.ok) {
-        setSuccessMessage("Round 1 Started (10 Mins)! All candidates transitioned to Problem 1.");
+        setSuccessMessage("Q1 Demo Started (5 Mins)! All candidates transitioned to Demo question.");
         loadData();
         setTimeout(() => setSuccessMessage(null), 4000);
       }
     } catch (err) {
-      alert("Failed to start contest");
+      alert("Failed to start Demo");
     }
   };
 
-  const handleToggleMusic = async () => {
+  const handleStartRound1 = async () => {
     try {
-      const nextState = !contestState?.backgroundMusicEnabled;
       const res = await fetch("/api/contest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle_music", enabled: nextState }),
+        body: JSON.stringify({ action: "start_round_1" }),
       });
       if (res.ok) {
-        setSuccessMessage(`Background music turned ${nextState ? "ON" : "OFF"} globally`);
+        setSuccessMessage("Round 1 Started (Problem 1 · Stack · 25 Mins)! Candidates transitioned.");
         loadData();
-        setTimeout(() => setSuccessMessage(null), 3000);
+        setTimeout(() => setSuccessMessage(null), 4000);
       }
     } catch (err) {
-      alert("Failed to toggle background music");
+      alert("Failed to start Round 1");
     }
   };
 
@@ -277,7 +278,7 @@ export default function AdminPage() {
         body: JSON.stringify({ action: "start_round_2" }),
       });
       if (res.ok) {
-        setSuccessMessage("Round 2 Unlocked (35 Mins)! All waiting participants transitioned to Question 2.");
+        setSuccessMessage("Round 2 Started (Problem 2 · Linked List · 30 Mins)! Candidates transitioned.");
         loadData();
         setTimeout(() => setSuccessMessage(null), 4000);
       }
@@ -286,21 +287,68 @@ export default function AdminPage() {
     }
   };
 
-  const handleEndContest = async () => {
-    if (!confirm("Are you sure you want to finalize the contest and lock the leaderboard?")) return;
+  const handlePublishResults = async () => {
+    if (!confirm("Are you sure you want to PUBLISH final standings to all candidates?")) return;
     try {
       const res = await fetch("/api/contest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end" }),
+        body: JSON.stringify({ action: "publish_results" }),
       });
       if (res.ok) {
-        setSuccessMessage("Contest Finalized! Leaderboard is locked.");
+        setSuccessMessage("Official Leaderboard & Final Standings Published!");
         loadData();
         setTimeout(() => setSuccessMessage(null), 4000);
       }
     } catch (err) {
-      alert("Failed to end contest");
+      alert("Failed to publish results");
+    }
+  };
+
+  const handleToggleMusic = async () => {
+    try {
+      const res = await fetch("/api/contest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle_music" }),
+      });
+      if (res.ok) {
+        loadData();
+      }
+    } catch (err) {
+      alert("Failed to toggle background music");
+    }
+  };
+
+  const handleSetMusicVolume = async (volume: number) => {
+    try {
+      const res = await fetch("/api/contest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_music_volume", volume }),
+      });
+      if (res.ok) {
+        loadData();
+      }
+    } catch (err) {
+      alert("Failed to update music volume");
+    }
+  };
+
+  const handleSkipMusicTrack = async () => {
+    try {
+      const res = await fetch("/api/contest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "skip_track" }),
+      });
+      if (res.ok) {
+        setSuccessMessage("Music skipped to next song in circle for all candidates!");
+        loadData();
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (err) {
+      alert("Failed to skip music track");
     }
   };
 
@@ -590,19 +638,21 @@ export default function AdminPage() {
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
-                    contestState?.status === "ACTIVE"
-                      ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                      : contestState?.status === "ENDED"
+                    contestState?.resultsPublished
                       ? "bg-purple-950 text-purple-400 border border-purple-800"
+                      : contestState?.status === "ACTIVE"
+                      ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
                       : "bg-zinc-900 text-zinc-400 border border-zinc-800"
                   }`}
                 >
-                  {contestState?.status === "ACTIVE"
-                    ? contestState?.round2Unlocked
-                      ? "ROUND 2 (35 MINS)"
-                      : "ROUND 1 (10 MINS)"
-                    : contestState?.status === "ENDED"
-                    ? "FINALIZED"
+                  {contestState?.resultsPublished
+                    ? "RESULTS PUBLISHED 🔓"
+                    : contestState?.status === "ACTIVE"
+                    ? contestState?.currentRound === 0
+                      ? "Q1 DEMO (5 MINS)"
+                      : contestState?.currentRound === 1
+                      ? "ROUND 1: STACK (25 MINS)"
+                      : "ROUND 2: LINKED LIST (30 MINS)"
                     : contestState?.status === "CLOSED"
                     ? "CLOSED"
                     : "STANDBY (LOBBY)"}
@@ -611,19 +661,22 @@ export default function AdminPage() {
 
               <p className="text-xs font-mono text-zinc-400 mb-4 leading-relaxed">
                 {contestState?.status === "WAITING" && (
-                  <>Click <strong>Start Round 1</strong> to open <strong>Problem 1 (Linked Lists · 10 Mins)</strong> for all participants.</>
+                  <>Click <strong>Start Q1 Demo</strong> to open <strong>Demo Question (Simple Array · 5 Mins, no marks)</strong> for candidates.</>
                 )}
-                {contestState?.status === "ACTIVE" && !contestState?.round2Unlocked && (
-                  <>Round 1 is running. Candidates who finish Q1 wait in the lobby with scores posted. Click <strong>Unlock Round 2</strong> to transition them to <strong>Problem 2 (Queues · 35 Mins)</strong>.</>
+                {contestState?.status === "ACTIVE" && contestState?.currentRound === 0 && (
+                  <>Q1 Demo is active (5 Mins). Candidates enter 2-min buffer after completing. Click <strong>Start Round 1</strong> to open <strong>Problem 1 (Stack · 25 Mins)</strong>.</>
                 )}
-                {contestState?.status === "ACTIVE" && contestState?.round2Unlocked && (
-                  <>Round 2 is active (35 Mins). Evaluation is computed within 5 mins buffer. Click <strong>End Contest</strong> to lock final standings.</>
+                {contestState?.status === "ACTIVE" && contestState?.currentRound === 1 && (
+                  <>Round 1 is active (25 Mins). Candidates enter 10-min buffer after completing. Click <strong>Start Round 2</strong> to open <strong>Problem 2 (Linked List · 30 Mins)</strong>.</>
                 )}
-                {contestState?.status === "ENDED" && (
-                  <>Contest is finalized. Official Leaderboard is locked. Candidates can view results.</>
+                {contestState?.status === "ACTIVE" && contestState?.currentRound === 2 && !contestState?.resultsPublished && (
+                  <>Round 2 is active (30 Mins). Candidates enter 10-min evaluation buffer. Click <strong>Publish Final Results &amp; Leaderboard</strong> to make standings public.</>
+                )}
+                {contestState?.resultsPublished && (
+                  <>Final standings published! Leaderboard is visible to all candidates.</>
                 )}
                 {contestState?.status === "CLOSED" && (
-                  <>Event is completely closed. Candidates can no longer view the leaderboard or log in.</>
+                  <>Event is permanently closed. Candidates cannot view leaderboard or sign in.</>
                 )}
               </p>
 
@@ -658,62 +711,82 @@ export default function AdminPage() {
                 >
                   <Save className="w-3.5 h-3.5" /> Export All Data (JSON)
                 </a>
-                <button
-                  onClick={handleToggleMusic}
-                  className={`px-3 py-1.5 rounded text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
-                    contestState?.backgroundMusicEnabled !== false
-                      ? "bg-red-950/70 border border-red-600 text-red-300 hover:bg-red-900"
-                      : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
-                  }`}
-                  title="Admin toggle for global background music across the platform"
-                >
-                  {contestState?.backgroundMusicEnabled !== false ? (
-                    <>
-                      <Volume2 className="w-3.5 h-3.5 text-red-500 animate-pulse" /> Music: ON
-                    </>
-                  ) : (
-                    <>
-                      <VolumeX className="w-3.5 h-3.5 text-zinc-500" /> Music: OFF
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5 bg-zinc-900 p-1.5 rounded border border-zinc-800 text-xs font-mono">
+                  <span className="text-red-400 font-bold flex items-center gap-1 px-1">
+                    <Music className="w-3.5 h-3.5 text-red-500 animate-pulse" /> 3-Song Stream:
+                  </span>
+                  {[0, 0.25, 0.5, 0.75, 1.0].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => handleSetMusicVolume(v)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-mono transition-all cursor-pointer ${
+                        (contestState?.backgroundMusicVolume ?? 0.25) === v
+                          ? "bg-red-950 text-red-300 font-bold border border-red-700"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                      title={`Set global music volume to ${v * 100}%`}
+                    >
+                      {v === 0 ? "Mute" : `${v * 100}%`}
+                    </button>
+                  ))}
+                  <button
+                    onClick={handleSkipMusicTrack}
+                    className="px-2.5 py-0.5 rounded bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-mono font-bold transition-all cursor-pointer border border-red-700 ml-1"
+                    title="Skip to next song in 3-song playlist for all participants"
+                  >
+                    Skip Song ⏭️
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-2 pt-3 border-t border-zinc-900">
-              {contestState?.status === "WAITING" && (
-                <button
-                  onClick={handleStartContest}
-                  className="btn-primary-red flex-1 w-full py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5" />
-                  Start Round 1 (10 Mins)
-                </button>
-              )}
+            <div className="flex flex-col gap-2 pt-3 border-t border-zinc-900">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {contestState?.status === "WAITING" && (
+                  <button
+                    onClick={handleStartDemo}
+                    className="btn-primary-red py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    Start Q1 Demo (5 Mins)
+                  </button>
+                )}
 
-              {contestState?.status === "ACTIVE" && !contestState?.round2Unlocked && (
-                <button
-                  onClick={handleStartRound2}
-                  className="btn-primary-red flex-1 w-full py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5" />
-                  Unlock Round 2 (35 Mins)
-                </button>
-              )}
+                {(contestState?.status === "WAITING" || contestState?.currentRound === 0) && (
+                  <button
+                    onClick={handleStartRound1}
+                    className="py-2 rounded-lg bg-zinc-900 border border-red-700/80 hover:bg-red-950 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 text-red-500" />
+                    Start Round 1 (P1 · 25 Mins)
+                  </button>
+                )}
 
-              {contestState?.status === "ACTIVE" && contestState?.round2Unlocked && (
-                <button
-                  onClick={handleEndContest}
-                  className="w-full sm:flex-1 py-2 rounded-lg bg-zinc-900 border border-red-700/60 hover:bg-red-950 text-red-400 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  Finalize Contest
-                </button>
-              )}
+                {(contestState?.currentRound === 1 || contestState?.currentRound === 0) && (
+                  <button
+                    onClick={handleStartRound2}
+                    className="py-2 rounded-lg bg-zinc-900 border border-red-700/80 hover:bg-red-950 text-red-300 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 text-red-500" />
+                    Start Round 2 (P2 · 30 Mins)
+                  </button>
+                )}
 
-              <div className="flex w-full sm:w-auto gap-2">
+                {!contestState?.resultsPublished && (
+                  <button
+                    onClick={handlePublishResults}
+                    className="btn-primary-red py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-yellow-300" />
+                    Publish Results &amp; Leaderboard 🔓
+                  </button>
+                )}
+              </div>
+
+              <div className="flex w-full gap-2 pt-1">
                 <button
                   onClick={handleCloseContest}
-                  className="w-full sm:w-auto px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-900 hover:bg-red-950/50 text-red-400 hover:text-red-300 font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-900 hover:bg-red-950/50 text-red-400 hover:text-red-300 font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                   title="Close the event permanently"
                 >
                   <ShieldAlert className="w-3.5 h-3.5" />
@@ -721,11 +794,11 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={handleResetContest}
-                  className="w-full sm:w-auto px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white font-mono text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                   title="Reset back to Lobby"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Reset
+                  Reset to Lobby
                 </button>
               </div>
             </div>
@@ -737,23 +810,23 @@ export default function AdminPage() {
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
-                  onClick={() => handleEvaluateBatch("p1-linked-list")}
+                  onClick={() => handleEvaluateBatch("p2-stack-lodge")}
                   disabled={isEvaluatingAll}
                   className="py-2 px-2 rounded bg-zinc-900 border border-zinc-800 hover:border-red-600 hover:bg-zinc-800 text-zinc-200 font-mono text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Evaluate only Question 1 submissions"
+                  title="Evaluate Problem 1 (Stack) submissions"
                 >
                   <Activity className="w-3.5 h-3.5 text-amber-500" />
-                  {isEvaluatingAll && evaluatingProblemId === "p1-linked-list" ? "Evaluating Q1..." : "Evaluate Q1"}
+                  {isEvaluatingAll && evaluatingProblemId === "p2-stack-lodge" ? "Evaluating P1..." : "Evaluate P1 (Stack)"}
                 </button>
 
                 <button
-                  onClick={() => handleEvaluateBatch("p2-queues")}
+                  onClick={() => handleEvaluateBatch("p3-linkedlist-gang")}
                   disabled={isEvaluatingAll}
                   className="py-2 px-2 rounded bg-zinc-900 border border-zinc-800 hover:border-red-600 hover:bg-zinc-800 text-zinc-200 font-mono text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="Evaluate only Question 2 submissions"
+                  title="Evaluate Problem 2 (Linked List) submissions"
                 >
                   <Activity className="w-3.5 h-3.5 text-blue-500" />
-                  {isEvaluatingAll && evaluatingProblemId === "p2-queues" ? "Evaluating Q2..." : "Evaluate Q2"}
+                  {isEvaluatingAll && evaluatingProblemId === "p3-linkedlist-gang" ? "Evaluating P2..." : "Evaluate P2 (Linked List)"}
                 </button>
 
                 <button

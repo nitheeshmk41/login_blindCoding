@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BLINDCODE // Cyber Arena - Red & Black Edition",
-  description: "High-stakes blind coding platform with local Ollama AI reverse evaluation and real-time lobby.",
+  title: "LOGIN 2K26 // DC Movie Blind Coding Arena",
+  description: "High-stakes blind coding platform with DC Tamil 2026 Movie DSA problems.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/bc_logo.png",
+    shortcut: "/bc_logo.png",
+    apple: "/bc_logo.png",
   },
 };
 

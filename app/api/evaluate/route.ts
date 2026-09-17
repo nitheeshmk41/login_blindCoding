@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const state = getContestState();
+  const contestSubs = state.submissions.filter((s) => s.problemId !== "p1-demo-array");
   return NextResponse.json({
-    submissions: state.submissions,
+    submissions: contestSubs,
     participants: state.participants,
   });
 }

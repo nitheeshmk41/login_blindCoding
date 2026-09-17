@@ -1,13 +1,23 @@
 {
   "code": "BLIND2026",
-  "name": "LOGIN 2K26 // BLIND CODING ARENA",
-  "status": "WAITING",
-  "currentRound": 1,
-  "round2Unlocked": false,
+  "name": "DC 2026 // BLIND CODING ARENA",
+  "status": "ENDED",
+  "currentRound": 2,
+  "round1Unlocked": true,
+  "round2Unlocked": true,
+  "resultsPublished": true,
   "backgroundMusicEnabled": true,
-  "round1DurationMinutes": 10,
-  "round2DurationMinutes": 35,
+  "demoDurationMinutes": 5,
+  "round1DurationMinutes": 25,
+  "round2DurationMinutes": 30,
+  "demoBufferMinutes": 2,
+  "round1BufferMinutes": 10,
+  "round2BufferMinutes": 10,
   "durationMinutes": 60,
+  "startedAt": "2026-09-17T04:45:32.772Z",
+  "demoStartedAt": "2026-09-17T04:45:32.772Z",
+  "round1StartedAt": "2026-09-17T04:46:06.029Z",
+  "round2StartedAt": "2026-09-17T04:46:18.699Z",
   "participants": [
     {
       "id": "p-demo-1",
@@ -15,11 +25,11 @@
       "email": "shadow@psgtech.ac.in",
       "phone": "+91 9876543210",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T12:20:48.766Z",
-      "currentProblemIndex": 2,
+      "joinedAt": "2026-09-17T04:33:23.581Z",
+      "currentProblemIndex": 3,
       "completed": true,
-      "totalScore": 175,
-      "lastActive": "2026-09-16T12:32:48.766Z"
+      "totalScore": 180,
+      "lastActive": "2026-09-17T04:45:23.581Z"
     },
     {
       "id": "p-demo-2",
@@ -27,11 +37,11 @@
       "email": "viper@psgtech.ac.in",
       "phone": "+91 9876543211",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T12:24:48.766Z",
-      "currentProblemIndex": 2,
+      "joinedAt": "2026-09-17T04:37:23.581Z",
+      "currentProblemIndex": 3,
       "completed": true,
-      "totalScore": 155,
-      "lastActive": "2026-09-16T12:32:48.766Z"
+      "totalScore": 165,
+      "lastActive": "2026-09-17T04:45:23.581Z"
     },
     {
       "id": "p-demo-3",
@@ -39,11 +49,11 @@
       "email": "knight@psgtech.ac.in",
       "phone": "+91 9876543212",
       "contestCode": "BLIND2026",
-      "joinedAt": "2026-09-16T12:28:48.766Z",
-      "currentProblemIndex": 1,
+      "joinedAt": "2026-09-17T04:41:23.581Z",
+      "currentProblemIndex": 2,
       "completed": false,
       "totalScore": 90,
-      "lastActive": "2026-09-16T12:32:48.766Z"
+      "lastActive": "2026-09-17T04:45:23.581Z"
     }
   ],
   "submissions": [
@@ -52,20 +62,27 @@
       "participantId": "p-demo-1",
       "participantName": "ShadowDev_99",
       "contestCode": "BLIND2026",
-      "problemId": "p1-linked-list",
-      "problemTitle": "Linked List — Remove Duplicates",
+      "problemId": "p2-stack-lodge",
+      "problemTitle": "The Lodge Escape — Room Stack Backtracking (Problem 1)",
       "language": "cpp",
-      "code": "ListNode* removeDuplicates(ListNode* head) {\n    if (!head) return nullptr;\n    ListNode* current = head;\n    while (current != nullptr) {\n        ListNode* runner = current;\n        while (runner->next != nullptr) {\n            if (runner->next->val == current->val) {\n                ListNode* temp = runner->next;\n                runner->next = runner->next->next;\n                delete temp;\n            } else {\n                runner = runner->next;\n            }\n        }\n        current = current->next;\n    }\n    return head;\n}",
-      "submittedAt": "2026-09-16T12:22:48.766Z",
+      "code": "class LodgeEscapeStack {\n    std::vector<int> stack;\npublic:\n    void push(int x) { stack.push_back(x); }\n    int pop() { if (isEmpty()) return -1; int top = stack.back(); stack.pop_back(); return top; }\n    int peek() { return isEmpty() ? -1 : stack.back(); }\n    bool isEmpty() { return stack.empty(); }\n};",
+      "submittedAt": "2026-09-17T04:35:23.581Z",
       "status": "completed",
       "evaluation": {
-        "score": 100,
-        "totalDeduction": 0,
+        "score": 95,
+        "totalDeduction": 5,
         "syntaxErrors": [],
         "logicErrors": [],
-        "edgeCaseErrors": [],
-        "aiFeedback": "Superb in-place duplicate removal implementation! O(n²) time, O(1) space with proper node memory cleanup.",
-        "evaluatedAt": "2026-09-16T12:23:48.766Z",
+        "edgeCaseErrors": [
+          {
+            "id": "ec1",
+            "type": "edge_case",
+            "message": "Stack capacity boundary handling",
+            "deduction": 5
+          }
+        ],
+        "aiFeedback": "Excellent LIFO stack implementation for the lodge escape!",
+        "evaluatedAt": "2026-09-17T04:36:23.581Z",
         "evaluatorType": "gemini",
         "modelUsed": "Gemini 1.5 Flash"
       }
@@ -75,24 +92,61 @@
       "participantId": "p-demo-1",
       "participantName": "ShadowDev_99",
       "contestCode": "BLIND2026",
-      "problemId": "p2-queues",
-      "problemTitle": "Circular Queue — Basic Implementation",
+      "problemId": "p3-linkedlist-gang",
+      "problemTitle": "Das's Gang — Linked List Member Removal (Problem 2)",
       "language": "cpp",
-      "code": "class CircularQueue {\n    int arr[5];\n    int front = 0, rear = -1, size = 0, CAPACITY = 5;\npublic:\n    bool enqueue(int x) {\n        if (isFull()) return false;\n        rear = (rear + 1) % CAPACITY;\n        arr[rear] = x;\n        size++;\n        return true;\n    }\n    bool dequeue() {\n        if (isEmpty()) return false;\n        front = (front + 1) % CAPACITY;\n        size--;\n        return true;\n    }\n    int peek() { return isEmpty() ? -1 : arr[front]; }\n    bool isEmpty() { return size == 0; }\n    bool isFull() { return size == CAPACITY; }\n};",
-      "submittedAt": "2026-09-16T12:27:48.766Z",
+      "code": "ListNode* removeGangMember(ListNode* head, int targetVal) {\n    ListNode dummy(0); dummy.next = head;\n    ListNode* prev = &dummy; ListNode* curr = head;\n    while (curr) {\n        if (curr->val == targetVal) { prev->next = curr->next; delete curr; curr = prev->next; }\n        else { prev = curr; curr = curr->next; }\n    }\n    return dummy.next;\n}",
+      "submittedAt": "2026-09-17T04:40:23.581Z",
       "status": "completed",
       "evaluation": {
-        "score": 100,
+        "score": 85,
+        "totalDeduction": 15,
+        "syntaxErrors": [],
+        "logicErrors": [],
+        "edgeCaseErrors": [],
+        "aiFeedback": "Clean in-place pointer manipulation for gang list member removal!",
+        "evaluatedAt": "2026-09-17T04:41:23.581Z",
+        "evaluatorType": "ollama",
+        "modelUsed": "Ollama (Llama 3)"
+      }
+    },
+    {
+      "id": "sub-1789620354583-c2b0",
+      "participantId": "p-1789620313022-50z39",
+      "participantName": "sample@gmail.com",
+      "contestCode": "BLIND2026",
+      "problemId": "p1-demo-array",
+      "problemTitle": "Das's Stolen Money — Recovered Amounts Array (Demo)",
+      "language": "cpp",
+      "code": "wtf",
+      "submittedAt": "2026-09-17T04:45:54.583Z",
+      "status": "completed",
+      "tabSwitchCount": 0,
+      "tabSwitchPenalty": 0,
+      "evaluation": {
+        "score": 0,
         "totalDeduction": 0,
         "syntaxErrors": [],
         "logicErrors": [],
         "edgeCaseErrors": [],
-        "aiFeedback": "Clean ring buffer circular queue! Handles modulo index wrapping, front/rear management, and size tracking cleanly without shifting elements.",
-        "evaluatedAt": "2026-09-16T12:28:48.766Z",
-        "evaluatorType": "ollama",
-        "modelUsed": "Ollama (Llama 3)"
+        "aiFeedback": "Demo Submission Recorded. No marks or evaluation for demo question.",
+        "evaluatedAt": "2026-09-17T04:45:54.583Z",
+        "evaluatorType": "heuristic_fallback"
       }
+    },
+    {
+      "id": "sub-1789620421944-g04t",
+      "participantId": "p-1789620313022-50z39",
+      "participantName": "sample@gmail.com",
+      "contestCode": "BLIND2026",
+      "problemId": "p3-linkedlist-gang",
+      "problemTitle": "Das's Gang — Linked List Member Removal (Problem 2)",
+      "language": "cpp",
+      "code": "jnsnnknskksckn",
+      "submittedAt": "2026-09-17T04:47:01.944Z",
+      "status": "pending",
+      "tabSwitchCount": 3,
+      "tabSwitchPenalty": 10
     }
-  ],
-  "backgroundMusicEnabled": true
+  ]
 }

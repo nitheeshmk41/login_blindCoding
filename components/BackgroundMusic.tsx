@@ -3,26 +3,34 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX, Music } from "lucide-react";
 
+export const PLAYLIST = [
+  { id: "track-1", title: "Hangova", src: "/Hangova.mp3" },
+  { id: "track-2", title: "Ain't Nobody", src: "/Ain't%20Nobody.mp3" },
+  { id: "track-3", title: "Raga of Revenge", src: "/Raga%20of%20Revenge.mp3" },
+];
+
 export default function BackgroundMusic() {
-  const [adminEnabled, setAdminEnabled] = useState(true);
+  const [adminVolume, setAdminVolume] = useState(0.25); // Default 25% volume
   const [userMuted, setUserMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [currentTrackIdx, setCurrentTrackIdx] = useState<number>(0);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const masterGainRef = useRef<GainNode | null>(null);
-  const isSetupRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Poll contest state to stay in sync with Admin music toggle
+  // Poll contest state to sync with Admin global volume settings & track selection
   useEffect(() => {
     const fetchState = async () => {
       try {
         const res = await fetch("/api/contest", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
-          if (data.contest?.backgroundMusicEnabled !== undefined) {
-            setAdminEnabled(Boolean(data.contest.backgroundMusicEnabled));
+          if (data.contest?.backgroundMusicVolume !== undefined) {
+            setAdminVolume(Number(data.contest.backgroundMusicVolume));
+          }
+          if (data.contest?.currentTrackIndex !== undefined) {
+            setCurrentTrackIdx(Number(data.contest.currentTrackIndex) % PLAYLIST.length);
           }
         }
       } catch (err) {
@@ -37,96 +45,11 @@ export default function BackgroundMusic() {
     };
   }, []);
 
-  // Web Audio Synth Engine for Ambient Cyber Synth Soundtrack
-  const setupAudioEngine = () => {
-    if (isSetupRef.current && audioCtxRef.current) return;
-
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-
-      const ctx = new AudioContextClass();
-      audioCtxRef.current = ctx;
-
-      const masterGain = ctx.createGain();
-      masterGain.gain.value = 0; // Start quiet, ramp up smoothly
-      masterGain.connect(ctx.destination);
-      masterGainRef.current = masterGain;
-
-      // 1. Low Sub-Bass Oscillator (Deep Dark Cyber Drone)
-      const bassOsc = ctx.createOscillator();
-      const bassGain = ctx.createGain();
-      const bassFilter = ctx.createBiquadFilter();
-
-      bassOsc.type = "sawtooth";
-      bassOsc.frequency.setValueAtTime(55, ctx.currentTime); // A1 note (55Hz)
-      bassFilter.type = "lowpass";
-      bassFilter.frequency.setValueAtTime(160, ctx.currentTime);
-      bassGain.gain.setValueAtTime(0.18, ctx.currentTime);
-
-      bassOsc.connect(bassFilter);
-      bassFilter.connect(bassGain);
-      bassGain.connect(masterGain);
-      bassOsc.start();
-
-      // 2. Soft Ambient Synth Chord Arpeggiation (Dark Cyber Chords)
-      const notes = [110, 130.81, 164.81, 196.0, 220.0]; // A2, C3, E3, G3, A3
-      let noteIndex = 0;
-
-      const playChordPulse = () => {
-        if (!audioCtxRef.current || ctx.state !== "running") return;
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-
-        const freq = notes[noteIndex % notes.length];
-        noteIndex++;
-
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, now);
-
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(450, now);
-
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.6);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(masterGain);
-
-        osc.start(now);
-        osc.stop(now + 3.0);
-      };
-
-      // Pulse ambient chords every 2.4 seconds
-      const chordInterval = setInterval(playChordPulse, 2400);
-
-      isSetupRef.current = true;
-
-      // Clean up on unmount
-      return () => {
-        clearInterval(chordInterval);
-        try {
-          bassOsc.stop();
-          ctx.close();
-        } catch (e) {}
-      };
-    } catch (err) {
-      console.error("Failed to initialize cyber ambient Web Audio engine:", err);
-    }
-  };
-
-  // Auto-start audio context on first user interaction anywhere on page
+  // First user interaction listener to trigger browser audio autoplay
   useEffect(() => {
     const handleFirstInteraction = () => {
       if (!hasInteracted) {
         setHasInteracted(true);
-      }
-      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-        audioCtxRef.current.resume();
       }
     };
 
@@ -139,65 +62,77 @@ export default function BackgroundMusic() {
     };
   }, [hasInteracted]);
 
-  // Handle Play / Pause state based on Admin Toggle + User Mute
+  const currentTrack = PLAYLIST[currentTrackIdx] || PLAYLIST[0];
+
+  // Auto-advance to next song in circle when current song ends locally
+  const handleEnded = () => {
+    setCurrentTrackIdx((prev) => (prev + 1) % PLAYLIST.length);
+  };
+
+  // Handle HTML5 Audio playback
   useEffect(() => {
-    const shouldPlay = adminEnabled && !userMuted;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const effectiveVol = Math.max(0, Math.min(1, adminVolume));
+    audio.volume = effectiveVol;
+
+    const shouldPlay = !userMuted && hasInteracted && effectiveVol > 0;
 
     if (shouldPlay) {
-      if (!isSetupRef.current) {
-        setupAudioEngine();
-      }
-
-      if (audioCtxRef.current && audioCtxRef.current.state === "suspended" && hasInteracted) {
-        audioCtxRef.current.resume();
-      }
-
-      if (masterGainRef.current && audioCtxRef.current) {
-        const now = audioCtxRef.current.currentTime;
-        masterGainRef.current.gain.cancelScheduledValues(now);
-        masterGainRef.current.gain.linearRampToValueAtTime(0.25, now + 1.2); // Smooth fade in
-      }
-      setIsPlaying(true);
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     } else {
-      if (masterGainRef.current && audioCtxRef.current) {
-        const now = audioCtxRef.current.currentTime;
-        masterGainRef.current.gain.cancelScheduledValues(now);
-        masterGainRef.current.gain.linearRampToValueAtTime(0.0001, now + 0.8); // Smooth fade out
-      }
+      audio.pause();
       setIsPlaying(false);
     }
-  }, [adminEnabled, userMuted, hasInteracted]);
+  }, [currentTrackIdx, adminVolume, userMuted, hasInteracted]);
 
   return (
     <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
-      {/* Sound Status Pill */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#121215]/90 border border-[#27272a] shadow-lg backdrop-blur-md text-xs font-mono">
+      {/* 3 Songs Circular Auto-Playing Audio */}
+      <audio
+        ref={audioRef}
+        src={currentTrack.src}
+        autoPlay
+        preload="auto"
+        onEnded={handleEnded}
+      />
+
+      {/* Sound Controller Widget (Participants cannot skip song, only Admin can) */}
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#121215]/95 border border-[#27272a] shadow-xl backdrop-blur-md text-xs font-mono">
         <Music
           className={`w-3.5 h-3.5 transition-colors ${
-            adminEnabled && !userMuted ? "text-[#dc2626] animate-pulse" : "text-zinc-600"
+            isPlaying ? "text-[#dc2626] animate-pulse" : "text-zinc-600"
           }`}
         />
-        <span className="text-zinc-300 hidden sm:inline">
-          MUSIC:{" "}
-          {!adminEnabled ? (
-            <span className="text-red-500 font-bold">OFF (BY ADMIN)</span>
-          ) : userMuted ? (
-            <span className="text-zinc-500">MUTED</span>
-          ) : (
-            <span className="text-emerald-400 font-bold">PLAYING</span>
-          )}
-        </span>
+        <div className="flex items-center gap-1.5 text-zinc-300">
+          <span className="hidden sm:inline font-bold text-zinc-200">
+            {currentTrack.title} ({currentTrackIdx + 1}/3)
+          </span>
 
-        {/* User local mute button */}
-        {adminEnabled && (
-          <button
-            onClick={() => setUserMuted(!userMuted)}
-            className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors ml-1"
-            title={userMuted ? "Unmute Ambient Music" : "Mute Ambient Music"}
-          >
-            {userMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-[#dc2626]" />}
-          </button>
-        )}
+          {userMuted ? (
+            <span className="text-zinc-500 font-bold ml-1">(MUTED)</span>
+          ) : !hasInteracted ? (
+            <span className="text-amber-400 text-[10px] ml-1 animate-pulse">[Click anywhere to start music]</span>
+          ) : (
+            <span className="text-emerald-400 text-[10px] ml-1 font-bold">
+              PLAYING ({Math.round((adminVolume || 0.25) * 100)}%)
+            </span>
+          )}
+        </div>
+
+        {/* Local Mute Toggle */}
+        <button
+          onClick={() => setUserMuted(!userMuted)}
+          className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer ml-1"
+          title={userMuted ? "Unmute Soundtrack" : "Mute Soundtrack"}
+        >
+          {userMuted ? (
+            <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+          ) : (
+            <Volume2 className="w-3.5 h-3.5 text-[#dc2626]" />
+          )}
+        </button>
       </div>
     </div>
   );
